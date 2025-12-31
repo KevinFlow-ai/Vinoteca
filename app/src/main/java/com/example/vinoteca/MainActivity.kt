@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
             VinotecaTheme {
                 VinotecaApp(
                     viewModel = viewModel,
-                    onExport = { exportCsvLauncher.launch("vinoteca.csv") },
+                    onExport = { exportCsvLauncher.launch("vinoteca.csv") }, // el nombre del archivo a exportar
                     onImport = {
                         // 🔥 SIN FILTRO
                         importCsvLauncher.launch(arrayOf("*/*"))
