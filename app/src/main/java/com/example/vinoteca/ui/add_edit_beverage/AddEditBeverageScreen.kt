@@ -67,11 +67,38 @@ import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
 
+/*
+Este archivo define una pantalla de Jetpack Compose reutilizable que sirve tanto para:
+
+➕ Añadir una nueva bebida
+
+✏️ Editar una bebida existente
+
+🗑️ Eliminar una bebida
+
+📷 Gestionar imágenes (cámara / galería)
+
+📦 Asignar categoría y ubicación física
+
+🔍 Escanear códigos de barras
+
+En términos de arquitectura:
+
+-Pertenece a la capa UI
+
+-Consume estado desde un ViewModel
+
+-No contiene lógica de persistencia directa
+
+-Está orientado a casos de uso reales, no a demos
+
+Esto es exactamente lo que se espera en una app moderna con MVVM + Compose.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditBeverageScreen(
     viewModel: BeverageViewModel,
-    beverageId: Int,
+    beverageId: Int, // define si estás en modo crear o editar
     onNavigateUp: () -> Unit
 ) {
     val isEditing = beverageId != -1

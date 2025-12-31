@@ -77,6 +77,8 @@ import com.example.vinoteca.viewmodel.BeverageViewModelFactory
 
 class MainActivity : ComponentActivity() {
 
+    // Crea la instancia de la base de datos Room.
+    //Construye el repositorio y la pasa al ViewModel mediante la factory.
     private val viewModel: BeverageViewModel by viewModels {
         val database = AppDatabase.getDatabase(this)
         val repository = BeverageRepository(database.beverageDao(), database.categoryDao())
@@ -84,6 +86,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Lanza el diálogo del sistema para "Guardar como..."
+    //usa ActivityResultContracts.CreateDocument para guardar la base de datos en CSV.
     private val exportCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         uri?.let {
             contentResolver.openOutputStream(it)?.use {
@@ -93,6 +96,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Lanza el selector de archivos del sistema para "Abrir"
+    //usa ActivityResultContracts.OpenDocument para importar la base de datos desde CSV.
     private val importCsvLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             uri ?: return@registerForActivityResult
@@ -132,6 +136,15 @@ class MainActivity : ComponentActivity() {
 fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: () -> Unit) {
     val navController = rememberNavController()
 
+    /*
+    NavHost y composable crean la navegación entre pantallas:
+
+    -Pantalla principal (main_screen) → lista de bebidas y filtros.
+
+    -Pantalla de agregar/editar bebida (add_edit_screen) → formulario completo con foto, barcode, categoría, ubicación.
+
+    -Pantalla de gestión de categorías (category_management) → CRUD de categorías.
+     */
     NavHost(navController = navController, startDestination = "main_screen") {
         composable("main_screen") {
             MainScreen(
@@ -166,6 +179,14 @@ fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: ()
 
 @Composable
 fun MainScreen(
+    /*
+    MainScreen
+
+    Pantalla que muestra la lista de vinos.
+
+    Tiene: Barra de búsqueda, Filtrado por categoría (pestañas dinámicas),Lista filtrada de bebidas
+    FloatingActionButton para agregar vino
+     */
     navController: NavController, 
     viewModel: BeverageViewModel, 
     onExport: () -> Unit, 
@@ -193,6 +214,8 @@ fun MainScreen(
         )
     }
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,6 +282,8 @@ fun AppBar(onManageCategories: () -> Unit, onExport: () -> Unit, onImport: () ->
     )
 }
 
+
+// La funcion WineCategories muestra la lista de vinos filtrada por categoría.
 @Composable
 fun WineCategories(
     modifier: Modifier = Modifier,
@@ -312,6 +337,8 @@ fun WineCategories(
     }
 }
 
+// La funcion WineList muestra la lista de vinos LazyColumn
+//Cada item es un Card con imagen, nombre y ubicación
 @Composable
 fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
     if (beverages.isEmpty()) {
@@ -356,7 +383,7 @@ fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
 }
 
 
-
+// Botón flotante para agregar vino. Color y estilo siguen tu tema personalizado.
 @Composable
 fun AddWineButton(onClick: () -> Unit) {
     FloatingActionButton(

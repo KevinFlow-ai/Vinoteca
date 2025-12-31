@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.vinoteca"
-    compileSdk = 36
+    compileSdk = 36 // compatibilidad con la última versión de Android disponible.
 
     defaultConfig {
         applicationId = "com.example.vinoteca"
@@ -59,15 +59,15 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     // Navigation, Icons, Image Loading (Coil)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.coil.compose)
+    implementation(libs.androidx.navigation.compose) // navegación entre pantallas con composables.
+    implementation(libs.androidx.material.icons.extended) // iconos de material design.
+    implementation(libs.coil.compose) // carga de imágenes desde URL/URI en Compose.
 
 
     // Room
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    implementation(libs.room.runtime) // acceso a la base de datos local.
+    implementation(libs.room.ktx) // acceso a la base de datos local.
+    ksp(libs.room.compiler) // genera código de Room automáticamente.
 
     // CameraX
     implementation(libs.camerax.camera2)
@@ -75,7 +75,8 @@ dependencies {
     implementation(libs.camerax.view)
 
     // ZXing
-    implementation(libs.zxing.android.embedded)
+    implementation(libs.zxing.android.embedded) // escaner de códigos de barras.
+
 
     // Test dependencies
     testImplementation(libs.junit)

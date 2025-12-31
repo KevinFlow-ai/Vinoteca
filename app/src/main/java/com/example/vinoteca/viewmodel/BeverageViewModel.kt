@@ -12,7 +12,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
+/*
+1. Rol del BeverageViewModel en tu arquitectura
 
+Tu proyecto sigue una arquitectura MVVM clara:
+
+-UI (Compose) → solo pinta estado y dispara eventos
+
+-ViewModel → contiene lógica de presentación y coordinación
+
+-Repository → abstrae el acceso a datos
+
+-Room (DAO + Entities) → persistencia
+
+Este ViewModel es el orquestador central:
+
+-Mantiene el estado observable para la UI
+
+-Llama al repositorio
+
+-Maneja lógica no trivial (importación/exportación CSV)
+
+
+ */
 class BeverageViewModel(private val repository: BeverageRepository) : ViewModel() {
 
     val beverages = mutableStateOf<List<Beverage>>(emptyList())

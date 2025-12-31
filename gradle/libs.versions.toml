@@ -1,3 +1,4 @@
+# El libs.versions.toml sirve para centralizar todas las versiones de dependencias y plugins en un solo lugar:
 [versions]
 agp = "8.2.2"
 kotlin = "1.9.22"
