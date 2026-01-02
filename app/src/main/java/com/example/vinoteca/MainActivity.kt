@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -77,13 +78,14 @@ import com.example.vinoteca.viewmodel.BeverageViewModel
 import com.example.vinoteca.viewmodel.BeverageViewModelFactory
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.text.Normalizer
 
 
 class MainActivity : ComponentActivity() {
 
     // Crea la instancia de la base de datos Room.
     //Construye el repositorio y la pasa al ViewModel mediante la factory.
-    private val viewModel: BeverageViewModel by viewModels { 
+    private val viewModel: BeverageViewModel by viewModels {
         val database = AppDatabase.getDatabase(this)
         val repository = BeverageRepository(database.beverageDao(), database.categoryDao(), database.subCategoryDao())
         BeverageViewModelFactory(repository)
@@ -104,13 +106,14 @@ class MainActivity : ComponentActivity() {
     private val importCsvLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
-                contentResolver.openInputStream(it)?.use { inputStream ->
-                    val csvContent = BufferedReader(InputStreamReader(inputStream)).readText()
-                    viewModel.importFromCsv(csvContent)
+                val csvText = contentResolver.openInputStream(it)?.bufferedReader()?.use { reader ->
+                    reader.readText()
+                }
+                if (csvText != null) {
+                    viewModel.importFromCsv(csvText)
                 }
             }
         }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -199,7 +202,7 @@ fun MainScreen(
     Tiene: Barra de búsqueda, Filtrado por categoría (pestañas dinámicas),Lista filtrada de bebidas
     FloatingActionButton para agregar vino
      */
-    navController: NavController, 
+    navController: NavController,
     viewModel: BeverageViewModel, 
     onExport: () -> Unit, 
     onImport: () -> Unit
@@ -301,21 +304,24 @@ fun WineCategories(
     onBeverageClick: (Int) -> Unit
 ) {
     val categories by viewModel.categories.collectAsState()
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    // 1. Usamos rememberSaveable para que el estado de las pestañas sobreviva a la navegación.
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     
     val subcategoriesForCategory by viewModel.subcategories.collectAsState()
-    var selectedSubTabIndex by remember { mutableIntStateOf(0) }
+    var selectedSubTabIndex by rememberSaveable { mutableIntStateOf(0) }
     val subCategoryNames = remember(subcategoriesForCategory) { listOf("Todos") + subcategoriesForCategory.map { it.name } }
     
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     val allBeverages by viewModel.beverages
 
+    // 3. Este efecto ahora solo se preocupa de cargar los datos correctos.
     LaunchedEffect(selectedTabIndex, categories) {
-        val selectedCategory = categories.getOrNull(selectedTabIndex)
-        selectedCategory?.let {
-            viewModel.getSubcategoriesForCategory(it.id)
+        if (categories.isNotEmpty()) {
+            val selectedCategory = categories.getOrNull(selectedTabIndex)
+            selectedCategory?.let {
+                viewModel.getSubcategoriesForCategory(it.id)
+            }
         }
-        selectedSubTabIndex = 0 
     }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
@@ -326,56 +332,67 @@ fun WineCategories(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-
-        // 1. Añadimos una comprobación para no dibujar el TabRow si la lista de categorías está vacía.
-        if (categories.isNotEmpty()) {
-            ScrollableTabRow(selectedTabIndex = selectedTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
-                categories.forEachIndexed { index, category ->
-                    Tab(
-                        selected = index == selectedTabIndex,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(category.name, maxLines = 1) }
-                    )
-                }
-            }
-        }
-
-        if (subcategoriesForCategory.isNotEmpty()) {
-            ScrollableTabRow(selectedTabIndex = selectedSubTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
-                subCategoryNames.forEachIndexed { index, subCategoryName ->
-                    Tab(
-                        selected = index == selectedSubTabIndex,
-                        onClick = { selectedSubTabIndex = index },
-                        text = { Text(subCategoryName, maxLines = 1) }
-                    )
-                }
-            }
-        }
         
-        val filteredBeverages = allBeverages.filter { beverage ->
+        val displayedBeverages = if (searchQuery.isNotBlank()) {
+            val normalizedQuery = searchQuery.unaccent()
+            allBeverages.filter { beverage ->
+                val normalizedName = beverage.name.unaccent()
+                normalizedName.contains(normalizedQuery, ignoreCase = true) ||
+                beverage.barcode.contains(searchQuery, ignoreCase = true)
+            }
+        } else {
             val selectedCategory = categories.getOrNull(selectedTabIndex)
-            val matchesSearch = searchQuery.isBlank() ||
-                    beverage.name.contains(searchQuery, ignoreCase = true) ||
-                    beverage.barcode.contains(searchQuery, ignoreCase = true)
+            if (selectedCategory == null) {
+                emptyList()
+            } else {
+                val selectedSubCategoryName = subCategoryNames.getOrNull(selectedSubTabIndex)
+                allBeverages.filter { beverage ->
+                    val matchesCategory = beverage.category == selectedCategory.name
+                    val matchesSubCategory = subcategoriesForCategory.isEmpty() || 
+                                           selectedSubCategoryName == "Todos" || 
+                                           beverage.subcategory == selectedSubCategoryName
+                    matchesCategory && matchesSubCategory
+                }
+            }
+        }
 
-            val matchesCategory = beverage.category == selectedCategory?.name
-
-            val selectedSubCategoryName = subCategoryNames.getOrNull(selectedSubTabIndex)
-            val matchesSubCategory = subcategoriesForCategory.isEmpty() || 
-                                   selectedSubCategoryName == "Todos" || 
-                                   beverage.subcategory == selectedSubCategoryName
-
-            matchesSearch && matchesCategory && matchesSubCategory
+        if (searchQuery.isBlank()) {
+            if (categories.isNotEmpty()) {
+                ScrollableTabRow(selectedTabIndex = selectedTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
+                    categories.forEachIndexed { index, category ->
+                        Tab(
+                            selected = index == selectedTabIndex,
+                            onClick = { 
+                                selectedTabIndex = index
+                                // 2. Reseteamos la subcategoría SOLO cuando el usuario hace clic.
+                                selectedSubTabIndex = 0 
+                            },
+                            text = { Text(category.name, maxLines = 1) }
+                        )
+                    }
+                }
+            }
+            if (subcategoriesForCategory.isNotEmpty()) {
+                ScrollableTabRow(selectedTabIndex = selectedSubTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
+                    subCategoryNames.forEachIndexed { index, subCategoryName ->
+                        Tab(
+                            selected = index == selectedSubTabIndex,
+                            onClick = { selectedSubTabIndex = index },
+                            text = { Text(subCategoryName, maxLines = 1) }
+                        )
+                    }
+                }
+            }
         }
 
         WineList(
-            beverages = filteredBeverages,
+            beverages = displayedBeverages,
             onBeverageClick = onBeverageClick
         )
     }
 }
 
-// La funcion WineList muestra la lista de vinos LazyColumn
+// La funcion WineList muestra la lista de vinos en LazyColumn
 //Cada item es un Card con imagen, nombre y ubicación
 @Composable
 fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
@@ -411,7 +428,8 @@ fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(text = beverage.name, fontWeight = FontWeight.Bold)
-                            Text("Subcategoría: ${beverage.subcategory ?: "N/A"}")
+                            // Text("Subcategoría: ${beverage.subcategory ?: "N/A"}"). Si quiero que aparezca la
+                            // subcategoría.
                             Text("Ubicación: ${beverage.location}")
                         }
                     }
@@ -432,4 +450,9 @@ fun AddWineButton(onClick: () -> Unit) {
     ) {
         Icon(imageVector = Icons.Default.Add, contentDescription = "Agregar vino")
     }
+}
+
+private fun String.unaccent(): String {
+    val temp = Normalizer.normalize(this, Normalizer.Form.NFD)
+    return "\\p{InCombiningDiacriticalMarks}+".toRegex().replace(temp, "")
 }
