@@ -1,11 +1,13 @@
 package com.example.vinoteca.ui.category
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.vinoteca.model.Category
 import com.example.vinoteca.viewmodel.BeverageViewModel
 
@@ -39,6 +42,7 @@ import com.example.vinoteca.viewmodel.BeverageViewModel
 @Composable
 fun CategoryManagementScreen(
     viewModel: BeverageViewModel,
+    navController: NavController, // <-- 1. Se añade el NavController
     onNavigateUp: () -> Unit
 ) {
     val categories by viewModel.categories.collectAsState()
@@ -63,7 +67,7 @@ fun CategoryManagementScreen(
                 .padding(it)
                 .padding(16.dp)
         ) {
-            // Formulario para añadir nueva categoría
+            // --- Formulario para añadir nueva categoría ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -80,7 +84,7 @@ fun CategoryManagementScreen(
                         isError = categoryNameError != null
                     )
                     categoryNameError?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error)
+                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -88,7 +92,7 @@ fun CategoryManagementScreen(
                     val existingCategory = categories.any { cat -> cat.name.equals(newCategoryName, ignoreCase = true) }
                     if (newCategoryName.isNotBlank() && !existingCategory) {
                         viewModel.addCategory(Category(name = newCategoryName))
-                        newCategoryName = "" // Limpiar campo
+                        newCategoryName = ""  // Limpiar campo
                     } else if (existingCategory) {
                         categoryNameError = "La categoría ya existe."
                     }
@@ -99,16 +103,29 @@ fun CategoryManagementScreen(
 
             Spacer(modifier = Modifier.padding(8.dp))
 
-            // Lista de categorías existentes
+            // --- Lista de categorías existentes ---
+            Text("Toca una categoría para gestionar sus subcategorías:", style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.height(8.dp))
             LazyColumn {
                 items(categories) { category ->
-                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            // 2. Hacemos que toda la tarjeta sea clicable
+                            .clickable { 
+                                // 3. Navegamos a la nueva pantalla pasando los argumentos
+                                navController.navigate("subcategory_management/${category.id}/${category.name}") 
+                            }
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = category.name)
+                            Text(text = category.name, style = MaterialTheme.typography.bodyLarge)
                             IconButton(onClick = { viewModel.deleteCategory(category) }) {
                                 Icon(Icons.Default.Delete, contentDescription = "Eliminar categoría")
                             }

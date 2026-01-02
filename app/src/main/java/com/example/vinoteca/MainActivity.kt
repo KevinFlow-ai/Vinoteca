@@ -45,6 +45,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -70,18 +71,21 @@ import com.example.vinoteca.data.BeverageRepository
 import com.example.vinoteca.model.Beverage
 import com.example.vinoteca.ui.add_edit_beverage.AddEditBeverageScreen
 import com.example.vinoteca.ui.category.CategoryManagementScreen
+import com.example.vinoteca.ui.category.SubCategoryManagementScreen
 import com.example.vinoteca.ui.theme.VinotecaTheme
 import com.example.vinoteca.viewmodel.BeverageViewModel
 import com.example.vinoteca.viewmodel.BeverageViewModelFactory
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 
 class MainActivity : ComponentActivity() {
 
     // Crea la instancia de la base de datos Room.
     //Construye el repositorio y la pasa al ViewModel mediante la factory.
-    private val viewModel: BeverageViewModel by viewModels {
+    private val viewModel: BeverageViewModel by viewModels { 
         val database = AppDatabase.getDatabase(this)
-        val repository = BeverageRepository(database.beverageDao(), database.categoryDao())
+        val repository = BeverageRepository(database.beverageDao(), database.categoryDao(), database.subCategoryDao())
         BeverageViewModelFactory(repository)
     }
 
@@ -98,20 +102,14 @@ class MainActivity : ComponentActivity() {
     // Lanza el selector de archivos del sistema para "Abrir"
     //usa ActivityResultContracts.OpenDocument para importar la base de datos desde CSV.
     private val importCsvLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            uri ?: return@registerForActivityResult
-
-            val csvText = contentResolver.openInputStream(uri)
-                ?.bufferedReader()
-                ?.use { it.readText() }
-                ?: return@registerForActivityResult
-
-            viewModel.importFromCsv(csvText)
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let {
+                contentResolver.openInputStream(it)?.use { inputStream ->
+                    val csvContent = BufferedReader(InputStreamReader(inputStream)).readText()
+                    viewModel.importFromCsv(csvContent)
+                }
+            }
         }
-
-
-
-
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,11 +119,8 @@ class MainActivity : ComponentActivity() {
             VinotecaTheme {
                 VinotecaApp(
                     viewModel = viewModel,
-                    onExport = { exportCsvLauncher.launch("vinoteca.csv") }, // el nombre del archivo a exportar
-                    onImport = {
-                        // 🔥 SIN FILTRO
-                        importCsvLauncher.launch(arrayOf("*/*"))
-                    }
+                    onExport = { exportCsvLauncher.launch("Vinoteca_Inventario.csv") },
+                    onImport = { importCsvLauncher.launch("*/*") }
                 )
             }
         }
@@ -135,7 +130,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: () -> Unit) {
     val navController = rememberNavController()
-
     /*
     NavHost y composable crean la navegación entre pantallas:
 
@@ -145,6 +139,7 @@ fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: ()
 
     -Pantalla de gestión de categorías (category_management) → CRUD de categorías.
      */
+
     NavHost(navController = navController, startDestination = "main_screen") {
         composable("main_screen") {
             MainScreen(
@@ -171,6 +166,23 @@ fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: ()
         composable("category_management") {
             CategoryManagementScreen(
                 viewModel = viewModel,
+                navController = navController, 
+                onNavigateUp = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "subcategory_management/{categoryId}/{categoryName}",
+            arguments = listOf(
+                navArgument("categoryId") { type = NavType.IntType },
+                navArgument("categoryName") { type = NavType.StringType }
+            )
+        ) {
+            val categoryId = it.arguments?.getInt("categoryId") ?: -1
+            val categoryName = it.arguments?.getString("categoryName") ?: ""
+            SubCategoryManagementScreen(
+                viewModel = viewModel,
+                categoryId = categoryId,
+                categoryName = categoryName,
                 onNavigateUp = { navController.popBackStack() }
             )
         }
@@ -214,8 +226,6 @@ fun MainScreen(
         )
     }
 }
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -291,14 +301,24 @@ fun WineCategories(
     onBeverageClick: (Int) -> Unit
 ) {
     val categories by viewModel.categories.collectAsState()
-    val categoryNames = remember(categories) { listOf("Todos") + categories.map { it.name } }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    
+    val subcategoriesForCategory by viewModel.subcategories.collectAsState()
+    var selectedSubTabIndex by remember { mutableIntStateOf(0) }
+    val subCategoryNames = remember(subcategoriesForCategory) { listOf("Todos") + subcategoriesForCategory.map { it.name } }
+    
     var searchQuery by remember { mutableStateOf("") }
     val allBeverages by viewModel.beverages
 
-    Column(modifier = modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
+    LaunchedEffect(selectedTabIndex, categories) {
+        val selectedCategory = categories.getOrNull(selectedTabIndex)
+        selectedCategory?.let {
+            viewModel.getSubcategoriesForCategory(it.id)
+        }
+        selectedSubTabIndex = 0 
+    }
+
+    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -307,27 +327,45 @@ fun WineCategories(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (categoryNames.size > 1) {
+        // 1. Añadimos una comprobación para no dibujar el TabRow si la lista de categorías está vacía.
+        if (categories.isNotEmpty()) {
             ScrollableTabRow(selectedTabIndex = selectedTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
-                categoryNames.forEachIndexed { index, categoryName ->
+                categories.forEachIndexed { index, category ->
                     Tab(
                         selected = index == selectedTabIndex,
                         onClick = { selectedTabIndex = index },
-                        text = { Text(categoryName, maxLines = 1) }
+                        text = { Text(category.name, maxLines = 1) }
                     )
                 }
             }
         }
 
+        if (subcategoriesForCategory.isNotEmpty()) {
+            ScrollableTabRow(selectedTabIndex = selectedSubTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
+                subCategoryNames.forEachIndexed { index, subCategoryName ->
+                    Tab(
+                        selected = index == selectedSubTabIndex,
+                        onClick = { selectedSubTabIndex = index },
+                        text = { Text(subCategoryName, maxLines = 1) }
+                    )
+                }
+            }
+        }
+        
         val filteredBeverages = allBeverages.filter { beverage ->
+            val selectedCategory = categories.getOrNull(selectedTabIndex)
             val matchesSearch = searchQuery.isBlank() ||
                     beverage.name.contains(searchQuery, ignoreCase = true) ||
                     beverage.barcode.contains(searchQuery, ignoreCase = true)
 
-            val selectedCategory = categoryNames.getOrNull(selectedTabIndex)
-            val matchesCategory = selectedCategory == "Todos" || beverage.category == selectedCategory
+            val matchesCategory = beverage.category == selectedCategory?.name
 
-            matchesSearch && matchesCategory
+            val selectedSubCategoryName = subCategoryNames.getOrNull(selectedSubTabIndex)
+            val matchesSubCategory = subcategoriesForCategory.isEmpty() || 
+                                   selectedSubCategoryName == "Todos" || 
+                                   beverage.subcategory == selectedSubCategoryName
+
+            matchesSearch && matchesCategory && matchesSubCategory
         }
 
         WineList(
@@ -373,6 +411,7 @@ fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(text = beverage.name, fontWeight = FontWeight.Bold)
+                            Text("Subcategoría: ${beverage.subcategory ?: "N/A"}")
                             Text("Ubicación: ${beverage.location}")
                         }
                     }

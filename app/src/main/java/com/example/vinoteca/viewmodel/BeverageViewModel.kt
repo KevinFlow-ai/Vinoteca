@@ -6,12 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.example.vinoteca.data.BeverageRepository
 import com.example.vinoteca.model.Beverage
 import com.example.vinoteca.model.Category
-import kotlinx.coroutines.Dispatchers
+import com.example.vinoteca.model.SubCategory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.BufferedReader
+
+/**
+ * ViewModel que actúa como intermediario entre la UI y el Repositorio.
+ * Mantiene el estado de la UI y expone los datos de la base de datos de una forma segura y observable.
+ * Toda la lógica de negocio y de presentación reside aquí.
+ */
+
 /*
 1. Rol del BeverageViewModel en tu arquitectura
 
@@ -37,9 +44,15 @@ Este ViewModel es el orquestador central:
  */
 class BeverageViewModel(private val repository: BeverageRepository) : ViewModel() {
 
+    // --- ESTADO OBSERVABLE PARA LA UI ---
+
     val beverages = mutableStateOf<List<Beverage>>(emptyList())
+    
     private val _categories = MutableStateFlow<List<Category>>(emptyList())
     val categories: StateFlow<List<Category>> = _categories.asStateFlow()
+    
+    private val _subcategories = MutableStateFlow<List<SubCategory>>(emptyList())
+    val subcategories: StateFlow<List<SubCategory>> = _subcategories.asStateFlow()
 
     private val _selectedBeverage = MutableStateFlow<Beverage?>(null)
     val selectedBeverage: StateFlow<Beverage?> = _selectedBeverage.asStateFlow()
@@ -47,9 +60,12 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
     init {
         getAllBeverages()
         getAllCategories()
+        // 1. Ya no es necesario cargar todas las subcategorías al inicio.
+        // Se cargarán bajo demanda cuando el usuario seleccione una categoría.
     }
 
-    // --- BEVERAGES ---
+    // --- LÓGICA PARA BEBIDAS ---
+
     fun getAllBeverages() {
         viewModelScope.launch {
             beverages.value = repository.getAllBeverages()
@@ -87,7 +103,8 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
         }
     }
 
-    // --- CATEGORIES ---
+    // --- LÓGICA PARA CATEGORÍAS ---
+
     fun getAllCategories() {
         viewModelScope.launch {
             _categories.value = repository.getAllCategories()
@@ -108,7 +125,35 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
         }
     }
 
-    // --- CSV IMPORT/EXPORT ---
+    // --- LÓGICA PARA SUBCATEGORÍAS ---
+
+    fun getSubcategoriesForCategory(categoryId: Int) {
+        viewModelScope.launch {
+            _subcategories.value = if (categoryId != -1) {
+                repository.getSubcategoriesForCategory(categoryId)
+            } else {
+                emptyList() // Si no hay ID, devolvemos una lista vacía.
+            }
+        }
+    }
+
+    fun addSubCategory(subCategory: SubCategory) {
+        viewModelScope.launch {
+            repository.addSubCategory(subCategory)
+            // 2. Refresca la lista solo con las subcategorías de la categoría padre correcta.
+            getSubcategoriesForCategory(subCategory.categoryId)
+        }
+    }
+
+    fun deleteSubCategory(subCategory: SubCategory) {
+        viewModelScope.launch {
+            repository.deleteSubCategory(subCategory)
+            // 3. Refresca la lista solo con las subcategorías de la categoría padre correcta.
+            getSubcategoriesForCategory(subCategory.categoryId)
+        }
+    }
+
+    // --- LÓGICA DE IMPORTAR/EXPORTAR ---
 
     private fun String.toCsvField(): String {
         return if (this.contains(",") || this.contains("\"") || this.contains("\n")) {
@@ -119,12 +164,13 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
     }
 
     fun generateCsvContent(): String {
-        val header = "id,name,category,barcode,photoUrl,location"
+        val header = "id,name,category,subcategory,barcode,photoUrl,location"
         val rows = beverages.value.joinToString(separator = "\n") { beverage ->
             listOf(
                 beverage.id.toString(),
                 beverage.name.toCsvField(),
                 beverage.category.toCsvField(),
+                beverage.subcategory?.toCsvField() ?: "",
                 beverage.barcode.toCsvField(),
                 beverage.photoUrl.toCsvField(),
                 beverage.location.toCsvField()
@@ -133,46 +179,47 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
         return "$header\n$rows"
     }
 
-    fun importFromCsv(csvText: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            csvText.lineSequence()
-                .drop(1) // cabecera
-                .forEach { line ->
-                    val tokens = line.split(
-                        ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
+    fun importFromCsv(csvContent: String) {
+        viewModelScope.launch {
+            val existingCategoryNames = repository.getAllCategories().map { it.name }.toMutableSet()
+            val lines = csvContent.lines()
+
+            for (line in lines.drop(1)) {
+                val tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
+
+                if (tokens.size == 7) {
+                    val categoryName = tokens[2].trim().removeSurrounding("\"")
+                    val subcategoryName = tokens[3].trim().removeSurrounding("\"").ifEmpty { null }
+                    val barcode = tokens[4].trim().removeSurrounding("\"")
+
+                    if (categoryName.isNotBlank() && !existingCategoryNames.contains(categoryName)) {
+                        repository.addCategory(Category(name = categoryName))
+                        existingCategoryNames.add(categoryName)
+                    }
+
+                    if (barcode.isBlank()) continue
+
+                    val existingBeverage = repository.findByBarcode(barcode)
+
+                    val beverage = Beverage(
+                        id = existingBeverage?.id ?: 0,
+                        name = tokens[1].trim().removeSurrounding("\""),
+                        category = categoryName,
+                        subcategory = subcategoryName,
+                        barcode = barcode,
+                        photoUrl = tokens[5].trim().removeSurrounding("\""),
+                        location = tokens[6].trim().removeSurrounding("\"")
                     )
 
-                    if (tokens.size == 6) {
-                        val name = tokens[1].trim().removeSurrounding("\"")
-                        val category = tokens[2].trim().removeSurrounding("\"")
-                        val barcode = tokens[3].trim().removeSurrounding("\"")
-                        val photoUrl = tokens[4].trim().removeSurrounding("\"")
-                        val location = tokens[5].trim().removeSurrounding("\"")
-
-                        if (barcode.isBlank()) return@forEach
-
-                        val existing = repository.findByBarcode(barcode)
-
-                        val beverage = Beverage(
-                            id = existing?.id ?: 0,
-                            name = name,
-                            category = category,
-                            barcode = barcode,
-                            photoUrl = photoUrl,
-                            location = location
-                        )
-
-                        if (existing != null) {
-                            repository.updateBeverage(beverage)
-                        } else {
-                            repository.addBeverage(beverage)
-                        }
+                    if (existingBeverage != null) {
+                        repository.updateBeverage(beverage)
+                    } else {
+                        repository.addBeverage(beverage)
                     }
                 }
-
+            }
             getAllBeverages()
+            getAllCategories()
         }
     }
-
-
 }

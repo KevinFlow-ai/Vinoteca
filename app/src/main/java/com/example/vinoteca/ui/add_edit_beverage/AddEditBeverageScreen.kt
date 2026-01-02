@@ -66,7 +66,6 @@ import com.example.vinoteca.viewmodel.BeverageViewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
-
 /*
 Este archivo define una pantalla de Jetpack Compose reutilizable que sirve tanto para:
 
@@ -94,6 +93,7 @@ En términos de arquitectura:
 
 Esto es exactamente lo que se espera en una app moderna con MVVM + Compose.
  */
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditBeverageScreen(
@@ -106,12 +106,14 @@ fun AddEditBeverageScreen(
 
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
+    var subcategory by remember { mutableStateOf<String?>(null) } // <-- 1. Nuevo estado para la subcategoría
     var barcode by remember { mutableStateOf("") }
     var shelf by remember { mutableStateOf("") }
     var position by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
     var isCategoryMenuExpanded by remember { mutableStateOf(false) }
+    var isSubCategoryMenuExpanded by remember { mutableStateOf(false) }
     var isShelfMenuExpanded by remember { mutableStateOf(false) }
     var isPositionMenuExpanded by remember { mutableStateOf(false) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
@@ -121,6 +123,7 @@ fun AddEditBeverageScreen(
 
     val categories by viewModel.categories.collectAsState()
     val categoryNames = remember(categories) { categories.map { it.name } }
+    val subcategoriesForSelectedCategory by viewModel.subcategories.collectAsState()
     val shelves = listOf("Balda 1", "Balda 2", "Balda 3", "Balda 4")
     val positions = listOf("Izquierda", "Centro", "Derecha")
 
@@ -128,6 +131,7 @@ fun AddEditBeverageScreen(
     var tempImageUri by remember { mutableStateOf<Uri?>(null) }
 
     // Lanzador para la CÁMARA: se activa DESPUÉS de que el permiso se haya concedido.
+
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
@@ -136,8 +140,8 @@ fun AddEditBeverageScreen(
             }
         }
     )
-
     // Lanzador para el PERMISO de la cámara: este es el que se llama primero.
+
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -146,10 +150,8 @@ fun AddEditBeverageScreen(
                 val uri = createImageUri(context)
                 tempImageUri = uri
                 cameraLauncher.launch(uri)
-            } else {
-                // El usuario ha denegado el permiso. Por ahora no hacemos nada,
-                // pero aquí se podría mostrar un mensaje informativo.
-            }
+            } // El usuario ha denegado el permiso. Por ahora no hacemos nada,
+            // pero aquí se podría mostrar un mensaje informativo.
         }
     )
 
@@ -161,6 +163,19 @@ fun AddEditBeverageScreen(
         }
     }
     
+    // 2. Efecto dinámico que se dispara cuando el usuario cambia la categoría principal.
+    LaunchedEffect(category) {
+        val selectedCategoryObject = categories.find { it.name == category }
+        if (selectedCategoryObject != null) {
+            viewModel.getSubcategoriesForCategory(selectedCategoryObject.id)
+        } else {
+            viewModel.getSubcategoriesForCategory(-1) // Pide una lista vacía si no hay categoría
+        }
+        if (!isEditing || selectedBeverage?.category != category) {
+            subcategory = null // Resetea la subcategoría si cambia la categoría principal
+        }
+    }
+
     LaunchedEffect(key1 = Unit) {
         if (isEditing) {
             viewModel.getBeverageById(beverageId)
@@ -168,6 +183,7 @@ fun AddEditBeverageScreen(
             viewModel.clearSelectedBeverage()
             name = ""
             category = ""
+            subcategory = null
             barcode = ""
             shelf = ""
             position = ""
@@ -180,6 +196,7 @@ fun AddEditBeverageScreen(
             selectedBeverage?.let {
                 name = it.name
                 category = it.category
+                subcategory = it.subcategory // <-- 5. Se rellena la subcategoría al editar
                 barcode = it.barcode
                 imageUri = if (it.photoUrl.isNotEmpty()) it.photoUrl.toUri() else null
                 val locationParts = it.location.split(" - ")
@@ -276,6 +293,38 @@ fun AddEditBeverageScreen(
                 }
             }
 
+            // --- 3. Desplegable condicional para Subcategorías ---
+            if (subcategoriesForSelectedCategory.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ExposedDropdownMenuBox(
+                    expanded = isSubCategoryMenuExpanded,
+                    onExpandedChange = { isSubCategoryMenuExpanded = !isSubCategoryMenuExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = subcategory ?: "", // Muestra el valor o un string vacío
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Subcategoría (Opcional)") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubCategoryMenuExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = isSubCategoryMenuExpanded,
+                        onDismissRequest = { isSubCategoryMenuExpanded = false }
+                    ) {
+                        subcategoriesForSelectedCategory.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption.name) },
+                                onClick = {
+                                    subcategory = selectionOption.name
+                                    isSubCategoryMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(Modifier.fillMaxWidth()) {
@@ -365,6 +414,7 @@ fun AddEditBeverageScreen(
                             id = if (isEditing) beverageId else 0,
                             name = name,
                             category = category,
+                            subcategory = subcategory, // <-- 4. Guardamos la subcategoría
                             barcode = barcode,
                             location = finalLocation,
                             photoUrl = imageUri?.toString() ?: ""
