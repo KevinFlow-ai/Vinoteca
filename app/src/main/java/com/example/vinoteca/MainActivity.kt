@@ -7,8 +7,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,11 +60,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -96,7 +106,7 @@ class MainActivity : ComponentActivity() {
     private val exportCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         uri?.let {
             contentResolver.openOutputStream(it)?.use {
-                outputStream -> outputStream.write(viewModel.generateCsvContent().toByteArray())
+                    outputStream -> outputStream.write(viewModel.generateCsvContent().toByteArray())
             }
         }
     }
@@ -146,7 +156,7 @@ fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: ()
     NavHost(navController = navController, startDestination = "main_screen") {
         composable("main_screen") {
             MainScreen(
-                navController = navController, 
+                navController = navController,
                 viewModel = viewModel,
                 onExport = onExport,
                 onImport = onImport
@@ -154,7 +164,7 @@ fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: ()
         }
         composable(
             route = "add_edit_screen?beverageId={beverageId}",
-            arguments = listOf(navArgument("beverageId") { 
+            arguments = listOf(navArgument("beverageId") {
                 type = NavType.IntType
                 defaultValue = -1
             })
@@ -169,7 +179,7 @@ fun VinotecaApp(viewModel: BeverageViewModel, onExport: () -> Unit, onImport: ()
         composable("category_management") {
             CategoryManagementScreen(
                 viewModel = viewModel,
-                navController = navController, 
+                navController = navController,
                 onNavigateUp = { navController.popBackStack() }
             )
         }
@@ -203,17 +213,17 @@ fun MainScreen(
     FloatingActionButton para agregar vino
      */
     navController: NavController,
-    viewModel: BeverageViewModel, 
-    onExport: () -> Unit, 
+    viewModel: BeverageViewModel,
+    onExport: () -> Unit,
     onImport: () -> Unit
 ) {
     Scaffold(
-        topBar = { 
+        topBar = {
             AppBar(
                 onManageCategories = { navController.navigate("category_management") },
                 onExport = onExport,
                 onImport = onImport
-            ) 
+            )
         },
         floatingActionButton = {
             AddWineButton(onClick = { navController.navigate("add_edit_screen") })
@@ -243,7 +253,7 @@ fun AppBar(onManageCategories: () -> Unit, onExport: () -> Unit, onImport: () ->
             ) {
                 Text(
                     "VINOTECA 🍷",
-                    fontSize = 28.sp, 
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -255,25 +265,25 @@ fun AppBar(onManageCategories: () -> Unit, onExport: () -> Unit, onImport: () ->
             }
         },
         actions = {
-            IconButton(onClick = { showMenu = !showMenu }) { 
+            IconButton(onClick = { showMenu = !showMenu }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
             }
             DropdownMenu(
-                expanded = showMenu, 
+                expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
-                DropdownMenuItem( 
+                DropdownMenuItem(
                     text = { Text("Gestionar Categorías") },
                     leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) },
-                    onClick = { 
+                    onClick = {
                         showMenu = false
                         onManageCategories()
                     }
                 )
-                 DropdownMenuItem(
+                DropdownMenuItem(
                     text = { Text("Exportar a CSV") },
                     leadingIcon = { Icon(Icons.Default.FileDownload, contentDescription = null) },
-                    onClick = { 
+                    onClick = {
                         showMenu = false
                         onExport()
                     }
@@ -281,7 +291,7 @@ fun AppBar(onManageCategories: () -> Unit, onExport: () -> Unit, onImport: () ->
                 DropdownMenuItem(
                     text = { Text("Importar desde CSV") },
                     leadingIcon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
-                    onClick = { 
+                    onClick = {
                         showMenu = false
                         onImport()
                     }
@@ -289,8 +299,8 @@ fun AppBar(onManageCategories: () -> Unit, onExport: () -> Unit, onImport: () ->
             }
         },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = Color(0xFFBD7474), 
-            titleContentColor = Color(0xFFF1EDEF) 
+            containerColor = Color(0xFFBD7474),
+            titleContentColor = Color(0xFFF1EDEF)
         )
     )
 }
@@ -328,7 +338,7 @@ fun WineCategories(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            label = { Text("Buscar por nombre o código...") },
+            label = { Text("Buscar por nombre o código de barras...") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -338,7 +348,7 @@ fun WineCategories(
             allBeverages.filter { beverage ->
                 val normalizedName = beverage.name.unaccent()
                 normalizedName.contains(normalizedQuery, ignoreCase = true) ||
-                beverage.barcode.contains(searchQuery, ignoreCase = true)
+                        beverage.barcode.contains(searchQuery, ignoreCase = true)
             }
         } else {
             val selectedCategory = categories.getOrNull(selectedTabIndex)
@@ -348,9 +358,9 @@ fun WineCategories(
                 val selectedSubCategoryName = subCategoryNames.getOrNull(selectedSubTabIndex)
                 allBeverages.filter { beverage ->
                     val matchesCategory = beverage.category == selectedCategory.name
-                    val matchesSubCategory = subcategoriesForCategory.isEmpty() || 
-                                           selectedSubCategoryName == "Todos" || 
-                                           beverage.subcategory == selectedSubCategoryName
+                    val matchesSubCategory = subcategoriesForCategory.isEmpty() ||
+                            selectedSubCategoryName == "Todos" ||
+                            beverage.subcategory == selectedSubCategoryName
                     matchesCategory && matchesSubCategory
                 }
             }
@@ -362,12 +372,12 @@ fun WineCategories(
                     categories.forEachIndexed { index, category ->
                         Tab(
                             selected = index == selectedTabIndex,
-                            onClick = { 
+                            onClick = {
                                 selectedTabIndex = index
                                 // 2. Reseteamos la subcategoría SOLO cuando el usuario hace clic.
                                 selectedSubTabIndex = 0 
                             },
-                            text = { Text(category.name, maxLines = 1) }
+                            text = { Text(category.name, maxLines = 1) } // nombre de la categoría
                         )
                     }
                 }
@@ -378,7 +388,7 @@ fun WineCategories(
                         Tab(
                             selected = index == selectedSubTabIndex,
                             onClick = { selectedSubTabIndex = index },
-                            text = { Text(subCategoryName, maxLines = 1) }
+                            text = { Text(subCategoryName, maxLines = 1) } // nombre de la subcategoría
                         )
                     }
                 }
@@ -394,8 +404,12 @@ fun WineCategories(
 
 // La funcion WineList muestra la lista de vinos en LazyColumn
 //Cada item es un Card con imagen, nombre y ubicación
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
+    // 1. Estado para guardar la bebida que se está previsualizando.
+    var previewedBeverage by remember { mutableStateOf<Beverage?>(null) }
+
     if (beverages.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -413,7 +427,15 @@ fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
-                        .clickable { onBeverageClick(beverage.id) }
+                        // 3. Usamos combinedClickable para detectar tanto el clic normal como el largo.
+
+                        .combinedClickable(
+                            onClick = { onBeverageClick(beverage.id) },
+                            onLongClick = {
+                                // Al hacer clic largo, guardamos la bebida en nuestro estado.
+                                previewedBeverage = beverage
+                            }
+                        )
                 ) {
                     Row(
                         modifier = Modifier.padding(8.dp),
@@ -434,6 +456,56 @@ fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // 4. El diálogo de previsualización. Solo se muestra si previewedBeverage no es nulo.
+    // funcion que al tener presionado sobre un vino, se muestra una imagen de la bebida.
+    if (previewedBeverage != null) {
+        Dialog(
+            onDismissRequest = { previewedBeverage = null }, // Al tocar fuera, se cierra.
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            var scale by remember { mutableStateOf(1f) }
+            var offset by remember { mutableStateOf(Offset.Zero) }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(0.7f)
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .pointerInput(Unit) {
+                        detectTransformGestures {
+                                _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 5f) // Permite más zoom
+                            val newOffset = offset + pan
+                            offset = newOffset
+                        }
+                    }
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(previewedBeverage!!.photoUrl),
+                    contentDescription = "Vista previa de la imagen",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {
+                            // Doble toque para resetear, toque simple para cerrar.
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    scale = if (scale > 1f) 1f else 2f
+                                    offset = Offset.Zero
+                                },
+                                onTap = { previewedBeverage = null }
+                            )
+                        }
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        ),
+                    contentScale = ContentScale.Fit
+                )
             }
         }
     }
