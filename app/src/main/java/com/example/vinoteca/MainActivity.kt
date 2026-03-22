@@ -120,7 +120,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // --- NUEVO Launcher para importar Paquete ZIP (Datos + Imágenes) ---
+    // --- Launcher para importar Paquete ZIP (Datos + Imágenes) ---
     private val importZipLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
             viewModel.importFullBackup(this, it) { success ->
@@ -136,6 +136,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // --- AUTO-IMPORTACIÓN ---
+        // Intentar importar datos iniciales si la app está vacía (al clonar el proyecto)
+        viewModel.checkAndImportInitialData(this)
+
         setContent {
             VinotecaTheme {
                 VinotecaApp(
