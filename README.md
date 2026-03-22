@@ -15,7 +15,7 @@ Durante mi experiencia como reponedor en **LIDL**, me enfrenté a un reto diario
 
 *   **El Reto:** El pasillo de vinos es denso y la distribución no siempre es intuitiva. Un empleado nuevo o alguien cubriendo una tienda distinta perdía 
     la mayor parte del tiempo **buscando la ubicación** del producto, no reponiéndolo.
-*   **La Métrica:** Inicialmente, completar la reposición tomaba **1 hora y media**. Tras memorizar las ubicaciones, el tiempo bajaba a **1 hora**.
+*   **La Métrica:** Inicialmente, completar la reposición me tomaba **1 hora y media**. Tras memorizar las ubicaciones, el tiempo bajo a **1 hora**.
 *   **La Conclusión:** La ineficiencia no estaba en el esfuerzo físico,  sino saber exactamente dónde estaba cada vino. La mayor pérdida de tiempo venía de buscar, no de reponer.
 
 ---
@@ -26,9 +26,9 @@ Durante mi experiencia como reponedor en **LIDL**, me enfrenté a un reto diario
 escanear o buscar un producto y saber **exactamente dónde debe colocarlo** en cuestión de segundos.
 
 ### Características Principales:
-*   🔍 **Búsqueda Instantánea:** Localiza cualquier vino por nombre o mediante escaneo de código de barras.
+*   🔍 **Búsqueda Instantánea:** Localiza cualquier vino por nombre o mediante **escaneo de código de barras**.
 *   📍 **Ubicación Precisa:** Información detallada sobre el estante o sección donde debe ir el producto.
-*   📸 **Referencia Visual:** Visualización de imágenes con funciones de zoom para asegurar que el producto coincida con la etiqueta del lineal.
+*   📸 **Referencia Visual:** Visualización de imágenes con funciones de zoom para asegurar que el producto coincida con la etiqueta del producto.
 *   🗂️ **Gestión Jerárquica:** Organización por categorías y subcategorías para reflejar fielmente la estructura de la tienda.
 *   📦 **Sistema de Backups Inteligentes:** Exportación e importación de datos completos (incluyendo imágenes) mediante archivos comprimidos (.zip) para facilitar el despliegue en nuevos dispositivos.
 
