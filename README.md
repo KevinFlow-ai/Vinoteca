@@ -16,7 +16,7 @@ Durante mi experiencia como reponedor en **LIDL**, me enfrenté a un reto diario
 *   **El Reto:** El pasillo de vinos es denso y la distribución no siempre es intuitiva. Un empleado nuevo o alguien cubriendo una tienda distinta perdía 
     la mayor parte del tiempo **buscando la ubicación** del producto, no reponiéndolo.
 *   **La Métrica:** Inicialmente, completar la reposición tomaba **1 hora y media**. Tras memorizar las ubicaciones, el tiempo bajaba a **1 hora**.
-*   **La Conclusión:** La ineficiencia no estaba en el esfuerzo físico, sino en la **latencia de información**. La memoria humana era el único "sistema de datos" disponible.
+*   **La Conclusión:** La ineficiencia no estaba en el esfuerzo físico,  sino saber exactamente dónde estaba cada vino. La mayor pérdida de tiempo venía de buscar, no de reponer.
 
 ---
 
