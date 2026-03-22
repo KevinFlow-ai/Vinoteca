@@ -76,7 +76,8 @@ Soy un desarrollador con enfoque en **resolver problemas reales a través de la 
 
 ¡Conectemos!
 
-[LinkedIn: Kevin Flores](https://www.linkedin.com/in/kevin-flores-full-stack-developer)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Kevin_Flores-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/kevin-flores-full-stack-developer)
+
 
 ---
 
