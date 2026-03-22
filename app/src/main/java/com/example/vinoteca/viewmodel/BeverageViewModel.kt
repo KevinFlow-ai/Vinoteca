@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
 
 /**
  * ViewModel que actúa como intermediario entre la UI y el Repositorio.
@@ -181,34 +180,57 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
 
     fun importFromCsv(csvContent: String) {
         viewModelScope.launch {
-            val existingCategoryNames = repository.getAllCategories().map { it.name }.toMutableSet()
+            // Cargar categorías y subcategorías actuales para evitar duplicados y obtener IDs
+            val allCategories = repository.getAllCategories()
+            val categoryMap = allCategories.associateBy { it.name }.toMutableMap()
+            
+            val allSubcategories = repository.getAllSubcategories()
+            // Usamos un set de pares (categoryId, name) para identificar subcategorías existentes
+            val subcategorySet = allSubcategories.map { it.categoryId to it.name }.toMutableSet()
+
             val lines = csvContent.lines()
 
             for (line in lines.drop(1)) {
+                if (line.isBlank()) continue
+                // Expresión regular para separar por coma respetando comillas
                 val tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
 
-                if (tokens.size == 7) {
+                if (tokens.size >= 7) {
+                    val name = tokens[1].trim().removeSurrounding("\"")
                     val categoryName = tokens[2].trim().removeSurrounding("\"")
                     val subcategoryName = tokens[3].trim().removeSurrounding("\"").ifEmpty { null }
                     val barcode = tokens[4].trim().removeSurrounding("\"")
-
-                    if (categoryName.isNotBlank() && !existingCategoryNames.contains(categoryName)) {
-                        repository.addCategory(Category(name = categoryName))
-                        existingCategoryNames.add(categoryName)
-                    }
+                    val photoUrl = tokens[5].trim().removeSurrounding("\"")
+                    val location = tokens[6].trim().removeSurrounding("\"")
 
                     if (barcode.isBlank()) continue
 
-                    val existingBeverage = repository.findByBarcode(barcode)
+                    // 1. Asegurar que la categoría existe en la tabla de categorías
+                    var category = categoryMap[categoryName]
+                    if (category == null && categoryName.isNotBlank()) {
+                        val newId: Long = repository.addCategory(Category(name = categoryName))
+                        category = Category(id = newId.toInt(), name = categoryName)
+                        categoryMap[categoryName] = category
+                    }
 
+                    // 2. Asegurar que la subcategoría existe en la tabla de subcategorías
+                    if (category != null && subcategoryName != null && subcategoryName.isNotBlank()) {
+                        if (!subcategorySet.contains(category.id to subcategoryName)) {
+                            repository.addSubCategory(SubCategory(name = subcategoryName, categoryId = category.id))
+                            subcategorySet.add(category.id to subcategoryName)
+                        }
+                    }
+
+                    // 3. Importar/Actualizar la bebida
+                    val existingBeverage = repository.findByBarcode(barcode)
                     val beverage = Beverage(
                         id = existingBeverage?.id ?: 0,
-                        name = tokens[1].trim().removeSurrounding("\""),
+                        name = name,
                         category = categoryName,
                         subcategory = subcategoryName,
                         barcode = barcode,
-                        photoUrl = tokens[5].trim().removeSurrounding("\""),
-                        location = tokens[6].trim().removeSurrounding("\"")
+                        photoUrl = photoUrl,
+                        location = location
                     )
 
                     if (existingBeverage != null) {
@@ -218,6 +240,7 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
                     }
                 }
             }
+            // Refrescar datos en el ViewModel para que la UI se actualice
             getAllBeverages()
             getAllCategories()
         }
