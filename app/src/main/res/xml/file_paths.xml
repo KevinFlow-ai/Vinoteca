@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
+    <!-- Mantenemos el nombre original "my_images" para que tus 200 fotos actuales sigan funcionando -->
     <cache-path name="my_images" path="." />
+
+    <!-- Nuevas rutas para el sistema de paquetes ZIP e imágenes permanentes -->
+    <files-path name="my_permanent_images" path="beverage_images/" />
+    <files-path name="export_data" path="exports/" />
 </paths>

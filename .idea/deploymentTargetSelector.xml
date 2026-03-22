@@ -7,7 +7,7 @@
       </SelectionState>
       <SelectionState runConfigName="Vinoteca">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2026-03-22T16:28:32.895693Z">
+        <DropdownSelection timestamp="2026-03-22T18:30:18.584969300Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\El Jefe\.android\avd\EmuladorDePruebas_2_2.avd" />
