@@ -10,8 +10,8 @@ import com.example.vinoteca.model.Category
 @Dao
 interface CategoryDao {
 
-    @Insert
-    suspend fun insert(category: Category) //Inserta una nueva categoría en la base de datos.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(category: Category): Long //Inserta una nueva categoría en la base de datos y devuelve su ID.
 
     @Delete
     suspend fun delete(category: Category) // Elimina una categoría de la base de datos.

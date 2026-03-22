@@ -22,9 +22,10 @@ interface SubCategoryDao {
      * insertar una subcategoría que ya existe (aunque en nuestra lógica de UI ya prevenimos esto).
      *
      * @param subCategory El objeto [SubCategory] a ser insertado.
+     * @return El ID de la nueva subcategoría insertada o -1 si ya existe.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(subCategory: SubCategory)
+    suspend fun insert(subCategory: SubCategory): Long
 
     /**
      * Elimina una subcategoría de la base de datos.
