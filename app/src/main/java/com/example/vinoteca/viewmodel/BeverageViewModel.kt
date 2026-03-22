@@ -19,6 +19,7 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -137,6 +138,31 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
             "\"" + this.replace("\"", "\"\"") + "\""
         } else {
             this
+        }
+    }
+
+    /**
+     * Comprueba si la base de datos está vacía y, en ese caso, intenta importar datos
+     * desde un archivo ZIP inicial ubicado en los assets.
+     */
+    fun checkAndImportInitialData(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentCategories = repository.getAllCategories()
+            // Solo importamos si no hay categorías (app vacía)
+            if (currentCategories.isEmpty()) {
+                try {
+                    context.assets.open("vinoteca_backup.zip").use { inputStream ->
+                        performImportFromStream(context, inputStream)
+                    }
+                    withContext(Dispatchers.Main) {
+                        getAllBeverages()
+                        getAllCategories()
+                    }
+                } catch (e: Exception) {
+                    // El archivo no existe o hubo un error, es normal si no se ha incluido el zip aún
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -289,80 +315,9 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
     fun importFullBackup(context: Context, zipUri: Uri, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val imagesDir = File(context.filesDir, "beverage_images")
-                if (!imagesDir.exists()) imagesDir.mkdirs()
-
-                val categoryMap = repository.getAllCategories().associateBy { it.name }.toMutableMap()
-                val subcategorySet = repository.getAllSubcategories().map { it.categoryId to it.name }.toMutableSet()
-
                 context.contentResolver.openInputStream(zipUri)?.use { inputStream ->
-                    val zipIn = ZipInputStream(inputStream)
-                    var entry = zipIn.nextEntry
-                    
-                    val imageFileMap = mutableMapOf<String, File>()
-                    var csvData: String? = null
-
-                    while (entry != null) {
-                        if (entry.name == "data.csv") {
-                            csvData = zipIn.bufferedReader().readText()
-                        } else if (entry.name.startsWith("images/")) {
-                            val fileName = entry.name.substringAfter("images/")
-                            val destFile = File(imagesDir, "import_${System.currentTimeMillis()}_$fileName")
-                            destFile.outputStream().use { zipIn.copyTo(it) }
-                            imageFileMap[fileName] = destFile
-                        }
-                        zipIn.closeEntry()
-                        entry = zipIn.nextEntry
-                    }
-
-                    csvData?.lines()?.drop(1)?.forEach { line ->
-                        if (line.isBlank()) return@forEach
-                        val tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
-                        if (tokens.size >= 6) {
-                            val name = tokens[0].trim().removeSurrounding("\"")
-                            val catName = tokens[1].trim().removeSurrounding("\"")
-                            val subcatName = tokens[2].trim().removeSurrounding("\"").ifEmpty { null }
-                            val barcode = tokens[3].trim().removeSurrounding("\"")
-                            val photoFileName = tokens[4].trim().removeSurrounding("\"")
-                            val location = tokens[5].trim().removeSurrounding("\"")
-
-                            var category = categoryMap[catName]
-                            if (category == null && catName.isNotBlank()) {
-                                val newId = repository.addCategory(Category(name = catName))
-                                category = Category(id = newId.toInt(), name = catName)
-                                categoryMap[catName] = category
-                            }
-
-                            if (category != null && subcatName != null && subcatName.isNotBlank()) {
-                                if (!subcategorySet.contains(category.id to subcatName)) {
-                                    repository.addSubCategory(SubCategory(name = subcatName, categoryId = category.id))
-                                    subcategorySet.add(category.id to subcatName)
-                                }
-                            }
-
-                            val photoUrl = if (photoFileName.isNotEmpty() && imageFileMap.containsKey(photoFileName)) {
-                                FileProvider.getUriForFile(
-                                    context,
-                                    "${context.packageName}.provider",
-                                    imageFileMap[photoFileName]!!
-                                ).toString()
-                            } else ""
-
-                            val existing = repository.findByBarcode(barcode)
-                            val beverage = Beverage(
-                                id = existing?.id ?: 0,
-                                name = name,
-                                category = catName,
-                                subcategory = subcatName,
-                                barcode = barcode,
-                                photoUrl = photoUrl,
-                                location = location
-                            )
-                            if (existing != null) repository.updateBeverage(beverage) else repository.addBeverage(beverage)
-                        }
-                    }
+                    performImportFromStream(context, inputStream)
                 }
-                
                 withContext(Dispatchers.Main) {
                     getAllBeverages()
                     getAllCategories()
@@ -373,6 +328,83 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
                 withContext(Dispatchers.Main) {
                     onComplete(false)
                 }
+            }
+        }
+    }
+
+    /**
+     * Lógica compartida para procesar un flujo de entrada de un archivo ZIP.
+     */
+    private suspend fun performImportFromStream(context: Context, inputStream: InputStream) {
+        val imagesDir = File(context.filesDir, "beverage_images")
+        if (!imagesDir.exists()) imagesDir.mkdirs()
+
+        val categoryMap = repository.getAllCategories().associateBy { it.name }.toMutableMap()
+        val subcategorySet = repository.getAllSubcategories().map { it.categoryId to it.name }.toMutableSet()
+
+        val zipIn = ZipInputStream(inputStream)
+        var entry = zipIn.nextEntry
+        
+        val imageFileMap = mutableMapOf<String, File>()
+        var csvData: String? = null
+
+        while (entry != null) {
+            if (entry.name == "data.csv") {
+                csvData = zipIn.bufferedReader().readText()
+            } else if (entry.name.startsWith("images/")) {
+                val fileName = entry.name.substringAfter("images/")
+                val destFile = File(imagesDir, "import_${System.currentTimeMillis()}_$fileName")
+                destFile.outputStream().use { zipIn.copyTo(it) }
+                imageFileMap[fileName] = destFile
+            }
+            zipIn.closeEntry()
+            entry = zipIn.nextEntry
+        }
+
+        csvData?.lines()?.drop(1)?.forEach { line ->
+            if (line.isBlank()) return@forEach
+            val tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
+            if (tokens.size >= 6) {
+                val name = tokens[0].trim().removeSurrounding("\"")
+                val catName = tokens[1].trim().removeSurrounding("\"")
+                val subcatName = tokens[2].trim().removeSurrounding("\"").ifEmpty { null }
+                val barcode = tokens[3].trim().removeSurrounding("\"")
+                val photoFileName = tokens[4].trim().removeSurrounding("\"")
+                val location = tokens[5].trim().removeSurrounding("\"")
+
+                var category = categoryMap[catName]
+                if (category == null && catName.isNotBlank()) {
+                    val newId = repository.addCategory(Category(name = catName))
+                    category = Category(id = newId.toInt(), name = catName)
+                    categoryMap[catName] = category
+                }
+
+                if (category != null && subcatName != null && subcatName.isNotBlank()) {
+                    if (!subcategorySet.contains(category.id to subcatName)) {
+                        repository.addSubCategory(SubCategory(name = subcatName, categoryId = category.id))
+                        subcategorySet.add(category.id to subcatName)
+                    }
+                }
+
+                val photoUrl = if (photoFileName.isNotEmpty() && imageFileMap.containsKey(photoFileName)) {
+                    FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        imageFileMap[photoFileName]!!
+                    ).toString()
+                } else ""
+
+                val existing = repository.findByBarcode(barcode)
+                val beverage = Beverage(
+                    id = existing?.id ?: 0,
+                    name = name,
+                    category = catName,
+                    subcategory = subcatName,
+                    barcode = barcode,
+                    photoUrl = photoUrl,
+                    location = location
+                )
+                if (existing != null) repository.updateBeverage(beverage) else repository.addBeverage(beverage)
             }
         }
     }
