@@ -75,7 +75,7 @@ Este repositorio está preparado para ser clonado y ejecutado directamente en An
 Soy un desarrollador con enfoque en **resolver problemas reales a través de la tecnología**. Creo firmemente que las mejores soluciones nacen de entender profundamente el flujo de trabajo del usuario final.
 
 ¡Conectemos! 
-*   [LinkedIn](www.linkedin.com/in/kevin-flores-204ba5384)
+*   [LinkedIn](www.linkedin.com/in/kevin-flores-full-stack-developer)
 
 ---
 
