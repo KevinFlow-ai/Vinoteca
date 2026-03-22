@@ -73,7 +73,9 @@ Este repositorio está preparado para ser clonado y ejecutado directamente en An
 ## 👨‍💻 Sobre mí
 
 Soy un desarrollador con enfoque en **resolver problemas reales a través de la tecnología**.
-¡Conectemos! 
+
+¡Conectemos!
+
 [LinkedIn: Kevin Flores](https://www.linkedin.com/in/kevin-flores-full-stack-developer)
 
 ---
