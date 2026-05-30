@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- `resources` agrupa colores XML usados por recursos Android clásicos fuera del tema Compose. -->
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+
+    <!-- `vinoteca_vino` replica el granate principal del logo elegido para recursos nativos como el launcher. -->
+    <color name="vinoteca_vino">#8B1732</color>
+
+    <!-- `vinoteca_vino_oscuro` aporta una variante profunda útil en fondos o detalles de alto contraste. -->
+    <color name="vinoteca_vino_oscuro">#551020</color>
+
+    <!-- `vinoteca_crema` da un tono cálido al fondo del icono y otros recursos no Compose. -->
+    <color name="vinoteca_crema">#FFF8F4</color>
+
+    <!-- `black` se conserva por compatibilidad con recursos XML ya existentes. -->
     <color name="black">#FF000000</color>
+
+    <!-- `white` se conserva por compatibilidad con recursos XML ya existentes. -->
     <color name="white">#FFFFFFFF</color>
 </resources>

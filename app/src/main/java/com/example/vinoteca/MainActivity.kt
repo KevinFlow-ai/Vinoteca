@@ -9,556 +9,255 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.WineBar
-import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import coil.compose.rememberAsyncImagePainter
 import com.example.vinoteca.data.AppDatabase
 import com.example.vinoteca.data.BeverageRepository
-import com.example.vinoteca.model.Beverage
-import com.example.vinoteca.ui.add_edit_beverage.AddEditBeverageScreen
-import com.example.vinoteca.ui.category.CategoryManagementScreen
-import com.example.vinoteca.ui.category.SubCategoryManagementScreen
-import com.example.vinoteca.ui.theme.VinotecaTheme
+import com.example.vinoteca.ui.agregar_editar_bebida.PantallaAgregarEditarBebida
+import com.example.vinoteca.ui.categoria.PantallaGestionCategorias
+import com.example.vinoteca.ui.categoria.PantallaGestionSubcategorias
+import com.example.vinoteca.ui.principal.PantallaPrincipal
+import com.example.vinoteca.ui.tema.TemaVinoteca
 import com.example.vinoteca.viewmodel.BeverageViewModel
 import com.example.vinoteca.viewmodel.BeverageViewModelFactory
-import java.text.Normalizer
 
+// `RutasVinoteca` centraliza los nombres de navegación para mantener coherencia entre pantallas y facilitar cambios futuros.
+private object RutasVinoteca {
 
+    // `pantallaPrincipal` identifica la home del inventario rediseñado.
+    const val pantallaPrincipal: String = "pantalla_principal"
+
+    // `pantallaAgregarEditar` mantiene la ruta de alta y edición de bebidas.
+    const val pantallaAgregarEditar: String = "pantalla_agregar_editar"
+
+    // `pantallaGestionCategorias` representa la administración visual de categorías.
+    const val pantallaGestionCategorias: String = "pantalla_gestion_categorias"
+
+    // `pantallaGestionSubcategorias` representa la administración visual de subcategorías.
+    const val pantallaGestionSubcategorias: String = "pantalla_gestion_subcategorias"
+}
+
+// `MainActivity` conserva la inicialización de la app y delega la experiencia visual a Compose con el nuevo sistema de diseño.
 class MainActivity : ComponentActivity() {
 
+    // `viewModel` reutiliza la lógica actual y evita cualquier cambio en la capa de negocio.
     private val viewModel: BeverageViewModel by viewModels {
+        // `database` obtiene la base Room existente exactamente igual que en la versión anterior.
         val database = AppDatabase.getDatabase(this)
-        val repository = BeverageRepository(database.beverageDao(), database.categoryDao(), database.subCategoryDao())
+
+        // `repository` mantiene el repositorio actual como punto de acceso a los datos.
+        val repository =
+            BeverageRepository(
+                database.beverageDao(),
+                database.categoryDao(),
+                database.subCategoryDao()
+            )
+
+        // `BeverageViewModelFactory` sigue creando el mismo ViewModel utilizado por el resto de la app.
         BeverageViewModelFactory(repository)
     }
 
-    // --- Launchers para CSV (Solo texto) ---
-    private val exportCsvLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
-        uri?.let {
-            contentResolver.openOutputStream(it)?.use { outputStream -> 
-                outputStream.write(viewModel.generateCsvContent().toByteArray()) 
-            }
-            Toast.makeText(this, "CSV exportado correctamente", Toast.LENGTH_SHORT).show()
-        }
-    }
+    // `exportCsvLauncher` conserva la exportación de CSV con el comportamiento original.
+    private val exportCsvLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
+            // `uri?.let` evita escribir si el usuario cancela la acción.
+            uri?.let {
+                // `openOutputStream` abre el destino elegido para volcar el CSV generado por el ViewModel existente.
+                contentResolver.openOutputStream(it)?.use { outputStream ->
+                    // `generateCsvContent` sigue siendo la fuente de la exportación.
+                    outputStream.write(viewModel.generateCsvContent().toByteArray())
+                }
 
-    private val importCsvLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            val csvText = contentResolver.openInputStream(it)?.bufferedReader()?.use { it.readText() }
-            if (csvText != null) {
-                viewModel.importFromCsv(csvText)
-                Toast.makeText(this, "CSV importado correctamente", Toast.LENGTH_SHORT).show()
+                // `Toast` informa del éxito de la operación sin alterar ninguna lógica.
+                Toast.makeText(this, "CSV exportado correctamente", Toast.LENGTH_SHORT).show()
             }
         }
-    }
 
-    // --- Launcher para importar Paquete ZIP (Datos + Imágenes) ---
-    private val importZipLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            viewModel.importFullBackup(this, it) { success ->
-                if (success) {
-                    Toast.makeText(this, "¡Paquete importado con éxito!", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this, "Error al importar el paquete", Toast.LENGTH_LONG).show()
+    // `importCsvLauncher` conserva la importación textual de inventario.
+    private val importCsvLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            // `uri?.let` descarta cancelaciones del selector de archivos.
+            uri?.let {
+                // `csvText` lee el contenido del archivo para entregarlo a la lógica ya existente.
+                val csvText = contentResolver.openInputStream(it)?.bufferedReader()?.use { lector -> lector.readText() }
+
+                // `if (csvText != null)` garantiza que solo se procesa contenido legible.
+                if (csvText != null) {
+                    // `importFromCsv` reutiliza la importación actual del ViewModel.
+                    viewModel.importFromCsv(csvText)
+
+                    // `Toast` confirma la importación al usuario.
+                    Toast.makeText(this, "CSV importado correctamente", Toast.LENGTH_SHORT).show()
                 }
             }
         }
-    }
 
+    // `importZipLauncher` mantiene la restauración completa desde paquetes ZIP.
+    private val importZipLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            // `uri?.let` evita trabajo cuando el usuario no selecciona un archivo.
+            uri?.let {
+                // `importFullBackup` sigue delegando el proceso pesado al ViewModel actual.
+                viewModel.importFullBackup(this, it) { exito ->
+                    // `if (exito)` adapta el feedback visual al resultado.
+                    if (exito) {
+                        Toast.makeText(this, "Paquete importado con éxito", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "Error al importar el paquete", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+
+    // `onCreate` activa edge-to-edge, la autoimportación y monta el árbol Compose final.
     override fun onCreate(savedInstanceState: Bundle?) {
+        // `super.onCreate` conserva el ciclo de vida estándar de Android.
         super.onCreate(savedInstanceState)
+
+        // `enableEdgeToEdge` permite que el nuevo diseño aproveche todo el dispositivo.
         enableEdgeToEdge()
 
-        // --- AUTO-IMPORTACIÓN ---
-        // Intentar importar datos iniciales si la app está vacía (al clonar el proyecto)
+        // `checkAndImportInitialData` mantiene la autoimportación original del inventario de respaldo.
         viewModel.checkAndImportInitialData(this)
 
+        // `setContent` inicia la experiencia Compose con el nuevo tema profesional.
         setContent {
-            VinotecaTheme {
-                VinotecaApp(
+            // `TemaVinoteca` aplica Material 3 dinámico reforzado con la marca elegida.
+            TemaVinoteca {
+                // `AplicacionVinoteca` conecta navegación y pantallas rediseñadas.
+                AplicacionVinoteca(
                     viewModel = viewModel,
-                    onExportCsv = { exportCsvLauncher.launch("Vinoteca_Inventario.csv") },
-                    onImportCsv = { importCsvLauncher.launch("*/*") },
-                    onExportZip = { 
+                    onExportarCsv = { exportCsvLauncher.launch("Vinoteca_Inventario.csv") },
+                    onImportarCsv = { importCsvLauncher.launch("*/*") },
+                    onExportarZip = {
                         viewModel.exportFullBackup(this) { zipUri ->
                             if (zipUri != null) {
-                                shareZipFile(zipUri)
+                                compartirArchivoZip(zipUri)
                             } else {
-                                Toast.makeText(this, "Error al generar paquete", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, "Error al generar el paquete", Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
-                    onImportZip = { importZipLauncher.launch("application/zip") }
+                    onImportarZip = { importZipLauncher.launch("application/zip") }
                 )
             }
         }
     }
 
-    /**
-     * Abre el menú de compartir de Android para enviar el archivo ZIP.
-     */
-    private fun shareZipFile(uri: Uri) {
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/zip"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
+    // `compartirArchivoZip` abre el chooser nativo de Android para compartir el respaldo completo.
+    private fun compartirArchivoZip(uri: Uri) {
+        // `intent` encapsula los metadatos de envío del archivo ZIP.
+        val intent =
+            Intent(Intent.ACTION_SEND).apply {
+                // `type` informa al sistema del formato del archivo compartido.
+                type = "application/zip"
+
+                // `EXTRA_STREAM` adjunta el archivo generado por la app.
+                putExtra(Intent.EXTRA_STREAM, uri)
+
+                // `FLAG_GRANT_READ_URI_PERMISSION` concede permisos temporales de lectura a la app receptora.
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+        // `createChooser` deja al usuario decidir con qué app compartir el archivo.
         startActivity(Intent.createChooser(intent, "Enviar paquete de Vinoteca"))
     }
 }
 
+// `AplicacionVinoteca` define el mapa de navegación Compose manteniendo intactos los flujos funcionales.
 @Composable
-fun VinotecaApp(
-    viewModel: BeverageViewModel, 
-    onExportCsv: () -> Unit, 
-    onImportCsv: () -> Unit,
-    onExportZip: () -> Unit,
-    onImportZip: () -> Unit
-) {
-    val navController = rememberNavController()
-
-    NavHost(navController = navController, startDestination = "main_screen") {
-        composable("main_screen") {
-            MainScreen(
-                navController = navController,
-                viewModel = viewModel,
-                onExportCsv = onExportCsv,
-                onImportCsv = onImportCsv,
-                onExportZip = onExportZip,
-                onImportZip = onImportZip
-            )
-        }
-        composable(
-            route = "add_edit_screen?beverageId={beverageId}",
-            arguments = listOf(navArgument("beverageId") {
-                type = NavType.IntType
-                defaultValue = -1
-            })
-        ) {
-            val beverageId = it.arguments?.getInt("beverageId") ?: -1
-            AddEditBeverageScreen(
-                viewModel = viewModel,
-                beverageId = beverageId,
-                onNavigateUp = { navController.popBackStack() }
-            )
-        }
-        composable("category_management") {
-            CategoryManagementScreen(
-                viewModel = viewModel,
-                navController = navController,
-                onNavigateUp = { navController.popBackStack() }
-            )
-        }
-        composable(
-            route = "subcategory_management/{categoryId}/{categoryName}",
-            arguments = listOf(
-                navArgument("categoryId") { type = NavType.IntType },
-                navArgument("categoryName") { type = NavType.StringType }
-            )
-        ) {
-            val categoryId = it.arguments?.getInt("categoryId") ?: -1
-            val categoryName = it.arguments?.getString("categoryName") ?: ""
-            SubCategoryManagementScreen(
-                viewModel = viewModel,
-                categoryId = categoryId,
-                categoryName = categoryName,
-                onNavigateUp = { navController.popBackStack() }
-            )
-        }
-    }
-}
-
-@Composable
-fun MainScreen(
-    navController: NavController,
+fun AplicacionVinoteca(
+    // `viewModel` sigue siendo la única fuente de verdad de la UI.
     viewModel: BeverageViewModel,
-    onExportCsv: () -> Unit,
-    onImportCsv: () -> Unit,
-    onExportZip: () -> Unit,
-    onImportZip: () -> Unit
+    // `onExportarCsv` activa la exportación ligera de datos.
+    onExportarCsv: () -> Unit,
+    // `onImportarCsv` activa la importación ligera de datos.
+    onImportarCsv: () -> Unit,
+    // `onExportarZip` activa la exportación completa con imágenes.
+    onExportarZip: () -> Unit,
+    // `onImportarZip` activa la importación completa con imágenes.
+    onImportarZip: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            AppBar(
-                onManageCategories = { navController.navigate("category_management") },
-                onExportCsv = onExportCsv,
-                onImportCsv = onImportCsv,
-                onExportZip = onExportZip,
-                onImportZip = onImportZip
-            )
-        },
-        floatingActionButton = {
-            AddWineButton(onClick = { navController.navigate("add_edit_screen") })
-        },
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        WineCategories(
-            modifier = Modifier.padding(innerPadding),
-            viewModel = viewModel,
-            onBeverageClick = { beverageId ->
-                navController.navigate("add_edit_screen?beverageId=$beverageId")
-            }
-        )
-    }
-}
+    // `controladorNavegacion` administra el back stack visual de la app.
+    val controladorNavegacion = rememberNavController()
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AppBar(
-    onManageCategories: () -> Unit, 
-    onExportCsv: () -> Unit, 
-    onImportCsv: () -> Unit,
-    onExportZip: () -> Unit,
-    onImportZip: () -> Unit
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    CenterAlignedTopAppBar(
-        title = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    "VINOTECA 🍷",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    "by Kevin Flores Corrales",
-                    fontSize = 23.sp,
-                    fontWeight = FontWeight.Light
-                )
-            }
-        },
-        actions = {
-            IconButton(onClick = { showMenu = !showMenu }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
-            }
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Gestionar Categorías") },
-                    leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) },
-                    onClick = {
-                        showMenu = false
-                        onManageCategories()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Exportar Paquete (.zip)") },
-                    leadingIcon = { Icon(Icons.Default.Inventory, contentDescription = null) },
-                    onClick = {
-                        showMenu = false
-                        onExportZip()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Importar Paquete (.zip)") },
-                    leadingIcon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
-                    onClick = {
-                        showMenu = false
-                        onImportZip()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Exportar CSV (Solo texto)") },
-                    leadingIcon = { Icon(Icons.Default.FileDownload, contentDescription = null) },
-                    onClick = {
-                        showMenu = false
-                        onExportCsv()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Importar CSV (Solo texto)") },
-                    leadingIcon = { Icon(Icons.Default.FileUpload, contentDescription = null) },
-                    onClick = {
-                        showMenu = false
-                        onImportCsv()
-                    }
-                )
-            }
-        },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = Color(0xFFBD7474),
-            titleContentColor = Color(0xFFF1EDEF)
-        )
-    )
-}
-
-@Composable
-fun WineCategories(
-    modifier: Modifier = Modifier,
-    viewModel: BeverageViewModel,
-    onBeverageClick: (Int) -> Unit
-) {
-    val categories by viewModel.categories.collectAsState()
-    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    
-    val subcategoriesForCategory by viewModel.subcategories.collectAsState()
-    var selectedSubTabIndex by rememberSaveable { mutableIntStateOf(0) }
-    val subCategoryNames = remember(subcategoriesForCategory) { listOf("Todos") + subcategoriesForCategory.map { it.name } }
-    
-    var searchQuery by rememberSaveable { mutableStateOf("") }
-    val allBeverages by viewModel.beverages
-
-    LaunchedEffect(selectedTabIndex, categories) {
-        if (categories.isNotEmpty()) {
-            val selectedCategory = categories.getOrNull(selectedTabIndex)
-            selectedCategory?.let {
-                viewModel.getSubcategoriesForCategory(it.id)
-            }
-        }
-    }
-
-    Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            label = { Text("Buscar por nombre o código de barras...") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        val displayedBeverages = if (searchQuery.isNotBlank()) {
-            val normalizedQuery = searchQuery.unaccent()
-            allBeverages.filter { beverage ->
-                val normalizedName = beverage.name.unaccent()
-                normalizedName.contains(normalizedQuery, ignoreCase = true) ||
-                        beverage.barcode.contains(searchQuery, ignoreCase = true)
-            }
-        } else {
-            val selectedCategory = categories.getOrNull(selectedTabIndex)
-            if (selectedCategory == null) {
-                emptyList()
-            } else {
-                val selectedSubCategoryName = subCategoryNames.getOrNull(selectedSubTabIndex)
-                allBeverages.filter { beverage ->
-                    val matchesCategory = beverage.category == selectedCategory.name
-                    val matchesSubCategory = subcategoriesForCategory.isEmpty() ||
-                            selectedSubCategoryName == "Todos" ||
-                            beverage.subcategory == selectedSubCategoryName
-                    matchesCategory && matchesSubCategory
-                }
-            }
-        }
-
-        if (searchQuery.isBlank()) {
-            if (categories.isNotEmpty()) {
-                ScrollableTabRow(selectedTabIndex = selectedTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
-                    categories.forEachIndexed { index, category ->
-                        Tab(
-                            selected = index == selectedTabIndex,
-                            onClick = {
-                                selectedTabIndex = index
-                                selectedSubTabIndex = 0 
-                            },
-                            text = { Text(category.name, maxLines = 1) } 
-                        )
-                    }
-                }
-            }
-            if (subcategoriesForCategory.isNotEmpty()) {
-                ScrollableTabRow(selectedTabIndex = selectedSubTabIndex, modifier = Modifier.fillMaxWidth(), edgePadding = 0.dp) {
-                    subCategoryNames.forEachIndexed { index, subCategoryName ->
-                        Tab(
-                            selected = index == selectedSubTabIndex,
-                            onClick = { selectedSubTabIndex = index },
-                            text = { Text(subCategoryName, maxLines = 1) } 
-                        )
-                    }
-                }
-            }
-        }
-
-        WineList(
-            beverages = displayedBeverages,
-            onBeverageClick = onBeverageClick
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun WineList(beverages: List<Beverage>, onBeverageClick: (Int) -> Unit) {
-    var previewedBeverage by remember { mutableStateOf<Beverage?>(null) }
-
-    if (beverages.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.Default.WineBar, contentDescription = null, modifier = Modifier.size(64.dp))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("No se encontraron vinos.")
-            }
-        }
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(beverages, key = { it.id }) { beverage ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .combinedClickable(
-                            onClick = { onBeverageClick(beverage.id) },
-                            onLongClick = {
-                                previewedBeverage = beverage
-                            }
-                        )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Image(
-                            painter = rememberAsyncImagePainter(beverage.photoUrl),
-                            contentDescription = "Imagen de la bebida",
-                            modifier = Modifier.size(64.dp),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(text = beverage.name, fontWeight = FontWeight.Bold)
-                            Text("Ubicación: ${beverage.location}")
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (previewedBeverage != null) {
-        Dialog(
-            onDismissRequest = { previewedBeverage = null },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            var scale by remember { mutableStateOf(1f) }
-            var offset by remember { mutableStateOf(Offset.Zero) }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize(0.7f)
-                    .background(Color.Black.copy(alpha = 0.8f))
-                    .pointerInput(Unit) {
-                        detectTransformGestures {
-                                _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(1f, 5f)
-                            val newOffset = offset + pan
-                            offset = newOffset
-                        }
-                    }
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(previewedBeverage!!.photoUrl),
-                    contentDescription = "Vista previa de la imagen",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onDoubleTap = {
-                                    scale = if (scale > 1f) 1f else 2f
-                                    offset = Offset.Zero
-                                },
-                                onTap = { previewedBeverage = null }
-                            )
-                        }
-                        .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offset.x,
-                            translationY = offset.y
-                        ),
-                    contentScale = ContentScale.Fit
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun AddWineButton(onClick: () -> Unit) {
-    FloatingActionButton(
-        onClick = onClick,
-        modifier = Modifier.padding(16.dp),
-        containerColor = MaterialTheme.colorScheme.secondary
+    // `NavHost` conecta las rutas actuales con las nuevas pantallas en español.
+    NavHost(
+        navController = controladorNavegacion,
+        startDestination = RutasVinoteca.pantallaPrincipal
     ) {
-        Icon(imageVector = Icons.Default.Add, contentDescription = "Agregar vino")
-    }
-}
+        // `composable` monta la nueva home del inventario.
+        composable(RutasVinoteca.pantallaPrincipal) {
+            PantallaPrincipal(
+                navController = controladorNavegacion,
+                viewModel = viewModel,
+                onExportarCsv = onExportarCsv,
+                onImportarCsv = onImportarCsv,
+                onExportarZip = onExportarZip,
+                onImportarZip = onImportarZip,
+                rutaAgregarEditar = RutasVinoteca.pantallaAgregarEditar,
+                rutaGestionCategorias = RutasVinoteca.pantallaGestionCategorias
+            )
+        }
 
-private fun String.unaccent(): String {
-    val temp = Normalizer.normalize(this, Normalizer.Form.NFD)
-    return "\\p{InCombiningDiacriticalMarks}+".toRegex().replace(temp, "")
+        // `composable` conserva la pantalla de creación y edición con el mismo argumento `beverageId`.
+        composable(
+            route = "${RutasVinoteca.pantallaAgregarEditar}?beverageId={beverageId}",
+            arguments =
+                listOf(
+                    navArgument("beverageId") {
+                        type = NavType.IntType
+                        defaultValue = -1
+                    }
+                )
+        ) { backStackEntry ->
+            // `idBebida` mantiene el contrato de edición existente.
+            val idBebida = backStackEntry.arguments?.getInt("beverageId") ?: -1
+
+            // `PantallaAgregarEditarBebida` reutiliza el mismo ViewModel con una presentación renovada.
+            PantallaAgregarEditarBebida(
+                viewModel = viewModel,
+                beverageId = idBebida,
+                onNavigateUp = { controladorNavegacion.popBackStack() }
+            )
+        }
+
+        // `composable` conserva la gestión de categorías como pantalla dedicada.
+        composable(RutasVinoteca.pantallaGestionCategorias) {
+            PantallaGestionCategorias(
+                viewModel = viewModel,
+                navController = controladorNavegacion,
+                onNavigateUp = { controladorNavegacion.popBackStack() },
+                rutaGestionSubcategorias = RutasVinoteca.pantallaGestionSubcategorias
+            )
+        }
+
+        // `composable` conserva el flujo de navegación por categoría hacia sus subcategorías.
+        composable(
+            route = "${RutasVinoteca.pantallaGestionSubcategorias}/{categoryId}/{categoryName}",
+            arguments =
+                listOf(
+                    navArgument("categoryId") { type = NavType.IntType },
+                    navArgument("categoryName") { type = NavType.StringType }
+                )
+        ) { backStackEntry ->
+            // `idCategoria` identifica la categoría seleccionada.
+            val idCategoria = backStackEntry.arguments?.getInt("categoryId") ?: -1
+
+            // `nombreCategoria` contextualiza visualmente la pantalla secundaria.
+            val nombreCategoria = backStackEntry.arguments?.getString("categoryName") ?: ""
+
+            // `PantallaGestionSubcategorias` mantiene la funcionalidad actual con nueva presentación.
+            PantallaGestionSubcategorias(
+                viewModel = viewModel,
+                categoryId = idCategoria,
+                categoryName = nombreCategoria,
+                onNavigateUp = { controladorNavegacion.popBackStack() }
+            )
+        }
+    }
 }
