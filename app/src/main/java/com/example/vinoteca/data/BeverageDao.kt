@@ -1,7 +1,12 @@
 package com.example.vinoteca.data
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.Query
+import androidx.room.Update
 import com.example.vinoteca.model.Beverage
+import kotlinx.coroutines.flow.Flow
 
 /**
  * DAO (Data Access Object) para la tabla de bebidas.
@@ -44,6 +49,9 @@ interface BeverageDao {
     // @Query para obtener todas las bebidas: Esta función obtiene todas las bebidas almacenadas en la base de datos.
     @Query("SELECT * FROM beverages")
     suspend fun getAllBeverages(): List<Beverage>
+
+    @Query("SELECT * FROM beverages ORDER BY name COLLATE NOCASE ASC")
+    fun observeAllBeverages(): Flow<List<Beverage>>
 }
 
 /* BeverageDao.kt

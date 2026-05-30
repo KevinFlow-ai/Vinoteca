@@ -1,8 +1,8 @@
 package com.example.vinoteca.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
-
 /**
  * Representa una bebida en la base de datos de la aplicación "Vinoteca".
  * Esta clase define la tabla 'beverages' y cada una de sus columnas.
@@ -27,7 +27,14 @@ import androidx.room.PrimaryKey
 //Mapear filas de la base de datos a objetos Kotlin
 //
 //Validar el esquema de la base de datos
-@Entity(tableName = "beverages") // Esta anotación indica que esta clase es una entidad de Room.
+@Entity(
+    tableName = "beverages",
+    indices = [
+        Index(value = ["barcode"]),
+        Index(value = ["category"]),
+        Index(value = ["subcategory"])
+    ]
+)
 data class Beverage(
     @PrimaryKey(autoGenerate = true) // Esta anotación indica que 'id' es la clave primaria de la tabla.
     val id: Int = 0,

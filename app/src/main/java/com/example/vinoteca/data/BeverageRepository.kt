@@ -3,20 +3,15 @@ package com.example.vinoteca.data
 import com.example.vinoteca.model.Beverage
 import com.example.vinoteca.model.Category
 import com.example.vinoteca.model.SubCategory
+import kotlinx.coroutines.flow.Flow
 
-/**
- * Repositorio que gestiona el acceso a los datos de la aplicación.
- * Actúa como una capa de abstracción entre los DAOs (la base de datos) y el ViewModel.
- * Centraliza todas las operaciones de datos, permitiendo cambiar la fuente de datos
- * (ej. de local a una API remota) sin afectar al resto de la app.
- */
 class BeverageRepository(
     private val beverageDao: BeverageDao,
     private val categoryDao: CategoryDao,
     private val subCategoryDao: SubCategoryDao
 ) {
 
-    // --- Funciones para Bebidas (Beverages) ---
+    fun observeAllBeverages(): Flow<List<Beverage>> = beverageDao.observeAllBeverages()
 
     suspend fun getAllBeverages(): List<Beverage> = beverageDao.getAllBeverages()
 
@@ -32,7 +27,7 @@ class BeverageRepository(
 
     suspend fun deleteBeverage(beverage: Beverage) = beverageDao.delete(beverage)
 
-    // --- Funciones para Categorías (Categories) ---
+    fun observeAllCategories(): Flow<List<Category>> = categoryDao.observeAllCategories()
 
     suspend fun getAllCategories(): List<Category> = categoryDao.getAllCategories()
 
@@ -40,11 +35,12 @@ class BeverageRepository(
 
     suspend fun deleteCategory(category: Category) = categoryDao.delete(category)
 
-    // --- Funciones para Subcategorías (SubCategories) ---
+    fun observeSubcategoriesForCategory(categoryId: Int): Flow<List<SubCategory>> =
+        subCategoryDao.observeSubcategoriesForCategory(categoryId)
 
-    suspend fun getSubcategoriesForCategory(categoryId: Int): List<SubCategory> = 
+    suspend fun getSubcategoriesForCategory(categoryId: Int): List<SubCategory> =
         subCategoryDao.getSubcategoriesForCategory(categoryId)
-    
+
     suspend fun getAllSubcategories(): List<SubCategory> = subCategoryDao.getAllSubcategories()
 
     suspend fun addSubCategory(subCategory: SubCategory): Long = subCategoryDao.insert(subCategory)

@@ -1,7 +1,12 @@
 package com.example.vinoteca.data
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import com.example.vinoteca.model.Category
+import kotlinx.coroutines.flow.Flow
 
 
 //Este archivo es otro DAO, pero esta vez es para interactuar con la
@@ -16,7 +21,9 @@ interface CategoryDao {
     @Delete
     suspend fun delete(category: Category) // Elimina una categoría de la base de datos.
 
-
-    @Query("SELECT * FROM categories")
+    @Query("SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC")
     suspend fun getAllCategories(): List<Category>
+
+    @Query("SELECT * FROM categories ORDER BY name COLLATE NOCASE ASC")
+    fun observeAllCategories(): Flow<List<Category>>
 }

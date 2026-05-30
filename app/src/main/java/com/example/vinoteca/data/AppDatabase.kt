@@ -10,13 +10,11 @@ import com.example.vinoteca.model.Beverage
 import com.example.vinoteca.model.Category
 import com.example.vinoteca.model.SubCategory
 
-/**
- * La clase principal de la base de datos Room para la aplicación.
- * Define las entidades (tablas) que contiene la base de datos y proporciona acceso a los DAOs.
- *
- * @version 2 - Se añade la tabla de subcategorías y el campo 'subcategory' a la tabla de bebidas.
- */
-@Database(entities = [Beverage::class, Category::class, SubCategory::class], version = 2, exportSchema = false)
+@Database(
+    entities = [Beverage::class, Category::class, SubCategory::class],
+    version = 4,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
 
     // --- DAOs ---
@@ -41,30 +39,40 @@ abstract class AppDatabase : RoomDatabase() {
                 // 2. Crear la nueva tabla 'subcategories'.
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS `subcategories` (
-                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
-                        `name` TEXT NOT NULL, 
-                        `categoryId` INTEGER NOT NULL, 
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `categoryId` INTEGER NOT NULL,
                         FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
                     )
-                """.trimIndent())
+                    """.trimIndent()
+                )
             }
         }
 
-        /**
-         * Obtiene la instancia única de la base de datos.
-         * Si la instancia no existe, la crea.
-         * @param context El contexto de la aplicación.
-         * @return La instancia única de AppDatabase.
-         */
+        private val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_beverages_barcode` ON `beverages` (`barcode`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_beverages_category` ON `beverages` (`category`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_beverages_subcategory` ON `beverages` (`subcategory`)")
+            }
+        }
+
+        private val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_subcategories_categoryId` ON `subcategories` (`categoryId`)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "vinoteca_database"
-                )
-                .addMigrations(MIGRATION_1_2) // Añadimos la migración al constructor de la base de datos.
-                .build()
+                val instance =
+                    Room.databaseBuilder(
+                        context.applicationContext,
+                        AppDatabase::class.java,
+                        "vinoteca_database"
+                    )
+                        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                        .build()
                 INSTANCE = instance
                 instance
             }
