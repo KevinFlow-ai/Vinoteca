@@ -189,6 +189,7 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
 
     fun deleteCategory(category: Category) {
         viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteBeveragesByCategory(category.name)
             repository.deleteCategory(category)
         }
     }
@@ -199,11 +200,20 @@ class BeverageViewModel(private val repository: BeverageRepository) : ViewModel(
         }
     }
 
-    fun deleteSubCategory(subCategory: SubCategory) {
+    fun deleteSubCategory(subCategory: SubCategory, categoryName: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteBeveragesByCategoryAndSubcategory(categoryName, subCategory.name)
             repository.deleteSubCategory(subCategory)
         }
     }
+
+    suspend fun countBeveragesInCategory(categoryName: String): Int =
+        withContext(Dispatchers.IO) { repository.countBeveragesByCategory(categoryName) }
+
+    suspend fun countBeveragesInSubcategory(categoryName: String, subcategoryName: String): Int =
+        withContext(Dispatchers.IO) {
+            repository.countBeveragesByCategoryAndSubcategory(categoryName, subcategoryName)
+        }
 
     private fun String.toCsvField(): String {
         return if (contains(",") || contains("\"") || contains("\n")) {

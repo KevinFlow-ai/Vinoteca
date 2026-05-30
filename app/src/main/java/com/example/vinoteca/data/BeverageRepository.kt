@@ -27,6 +27,22 @@ class BeverageRepository(
 
     suspend fun deleteBeverage(beverage: Beverage) = beverageDao.delete(beverage)
 
+    suspend fun countBeveragesByCategory(categoryName: String): Int =
+        beverageDao.countByCategory(categoryName)
+
+    suspend fun countBeveragesByCategoryAndSubcategory(
+        categoryName: String,
+        subcategoryName: String
+    ): Int = beverageDao.countByCategoryAndSubcategory(categoryName, subcategoryName)
+
+    suspend fun deleteBeveragesByCategory(categoryName: String) =
+        beverageDao.deleteByCategory(categoryName)
+
+    suspend fun deleteBeveragesByCategoryAndSubcategory(
+        categoryName: String,
+        subcategoryName: String
+    ) = beverageDao.deleteByCategoryAndSubcategory(categoryName, subcategoryName)
+
     fun observeAllCategories(): Flow<List<Category>> = categoryDao.observeAllCategories()
 
     suspend fun getAllCategories(): List<Category> = categoryDao.getAllCategories()

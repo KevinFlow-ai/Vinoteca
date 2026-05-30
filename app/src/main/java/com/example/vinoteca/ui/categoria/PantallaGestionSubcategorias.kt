@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -27,6 +28,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +48,7 @@ fun PantallaGestionSubcategorias(
     val subcategorias by viewModel.subcategories.collectAsState()
     var nombreNuevaSubcategoria by remember { mutableStateOf("") }
     var errorNombreSubcategoria by remember { mutableStateOf<String?>(null) }
+    var subcategoriaAEliminar by remember { mutableStateOf<SubCategory?>(null) }
 
     LaunchedEffect(categoryId) {
         viewModel.getSubcategoriesForCategory(categoryId)
@@ -135,6 +138,46 @@ fun PantallaGestionSubcategorias(
                 }
             }
 
+            subcategoriaAEliminar?.let { objetivo ->
+                val conteoVinos by produceState<Int?>(initialValue = null, objetivo.id) {
+                    value = viewModel.countBeveragesInSubcategory(categoryName, objetivo.name)
+                }
+                AlertDialog(
+                    onDismissRequest = { subcategoriaAEliminar = null },
+                    title = { Text("Eliminar subcategoría") },
+                    text = {
+                        Text(
+                            buildString {
+                                append("¿Seguro que quieres eliminar \"${objetivo.name}\"?")
+                                when (val n = conteoVinos) {
+                                    null -> append("…")
+                                    0 -> append(" ")
+                                    1 -> append(" También se eliminará 1 vino asociado. ")
+                                    else -> append(" También se eliminarán los $n vinos asociados. ")
+                                }
+                                append("Esta acción no se puede deshacer.")
+                            }
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            enabled = conteoVinos != null,
+                            onClick = {
+                                viewModel.deleteSubCategory(objetivo, categoryName)
+                                subcategoriaAEliminar = null
+                            }
+                        ) {
+                            Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { subcategoriaAEliminar = null }) {
+                            Text("Cancelar")
+                        }
+                    }
+                )
+            }
+
             if (subcategorias.isEmpty()) {
                 EstadoVacioGestionMinimal(
                     titulo = "No hay subcategorías",
@@ -149,7 +192,7 @@ fun PantallaGestionSubcategorias(
                         items(subcategorias) { subcategoria ->
                             FilaSubcategoriaMinimal(
                                 subcategoria = subcategoria,
-                                onEliminar = { viewModel.deleteSubCategory(subcategoria) }
+                                onEliminar = { subcategoriaAEliminar = subcategoria }
                             )
                             if (subcategoria != subcategorias.last()) {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

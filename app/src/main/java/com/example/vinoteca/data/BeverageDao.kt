@@ -52,6 +52,18 @@ interface BeverageDao {
 
     @Query("SELECT * FROM beverages ORDER BY name COLLATE NOCASE ASC")
     fun observeAllBeverages(): Flow<List<Beverage>>
+
+    @Query("SELECT COUNT(*) FROM beverages WHERE category = :categoryName")
+    suspend fun countByCategory(categoryName: String): Int
+
+    @Query("SELECT COUNT(*) FROM beverages WHERE category = :categoryName AND subcategory = :subcategoryName")
+    suspend fun countByCategoryAndSubcategory(categoryName: String, subcategoryName: String): Int
+
+    @Query("DELETE FROM beverages WHERE category = :categoryName")
+    suspend fun deleteByCategory(categoryName: String)
+
+    @Query("DELETE FROM beverages WHERE category = :categoryName AND subcategory = :subcategoryName")
+    suspend fun deleteByCategoryAndSubcategory(categoryName: String, subcategoryName: String)
 }
 
 /* BeverageDao.kt
