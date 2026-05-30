@@ -2,8 +2,8 @@ package com.example.vinoteca.model
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
-
 /**
  * Representa una subcategoría de bebida, que siempre está asociada a una categoría principal.
  * Por ejemplo, "Ron" es una subcategoría de la categoría principal "Licores".
@@ -16,15 +16,18 @@ import androidx.room.PrimaryKey
     tableName = "subcategories",
     // Definimos una "llave foránea" para asegurar la integridad de los datos.
     // Esto significa que una subcategoría no puede existir sin una categoría principal.
-    foreignKeys = [ForeignKey(
-        entity = Category::class, 
-        parentColumns = ["id"], // La columna de la tabla padre (Category).
-        childColumns = ["categoryId"], // La columna de esta tabla (SubCategory) que apunta al padre.
-        onDelete = ForeignKey.CASCADE // IMPORTANTE: Si una categoría se elimina, todas sus subcategorías se eliminarán en cascada.
-    )]
+    foreignKeys = [
+        ForeignKey(
+            entity = Category::class,
+            parentColumns = ["id"], // La columna de la tabla padre (Category).
+            childColumns = ["categoryId"], // La columna de esta tabla (SubCategory) que apunta al padre.
+            onDelete = ForeignKey.CASCADE // IMPORTANTE: Si una categoría se elimina, todas sus subcategorías se eliminarán en cascada.
+        )
+    ],
+    indices = [Index(value = ["categoryId"])]
 )
 data class SubCategory(
-    @PrimaryKey(autoGenerate = true) 
+    @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val name: String,
     val categoryId: Int

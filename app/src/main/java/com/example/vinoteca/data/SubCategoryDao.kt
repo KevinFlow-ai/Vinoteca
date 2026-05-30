@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.vinoteca.model.SubCategory
+import kotlinx.coroutines.flow.Flow
 
 /**
  * DAO (Data Access Object) para la tabla `subcategories`.
@@ -43,15 +44,12 @@ interface SubCategoryDao {
      * @param categoryId El ID de la [Category] padre.
      * @return Una lista de [SubCategory] que pertenecen a la categoría especificada.
      */
-    @Query("SELECT * FROM subcategories WHERE categoryId = :categoryId ORDER BY name ASC")
+    @Query("SELECT * FROM subcategories WHERE categoryId = :categoryId ORDER BY name COLLATE NOCASE ASC")
     suspend fun getSubcategoriesForCategory(categoryId: Int): List<SubCategory>
-    
-    /**
-     * Recupera todas las subcategorías de la base de datos, sin importar su categoría padre.
-     * Útil para validaciones o lógicas que necesiten la lista completa.
-     *
-     * @return Una lista con todas las [SubCategory] de la base de datos.
-     */
-    @Query("SELECT * FROM subcategories ORDER BY name ASC")
+
+    @Query("SELECT * FROM subcategories WHERE categoryId = :categoryId ORDER BY name COLLATE NOCASE ASC")
+    fun observeSubcategoriesForCategory(categoryId: Int): Flow<List<SubCategory>>
+
+    @Query("SELECT * FROM subcategories ORDER BY name COLLATE NOCASE ASC")
     suspend fun getAllSubcategories(): List<SubCategory>
 }
