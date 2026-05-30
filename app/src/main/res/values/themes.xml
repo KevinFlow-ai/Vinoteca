@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- `resources` agrupa los estilos XML anfitriones de la aplicación Android. -->
 <resources>
 
+    <!-- `Theme.Vinoteca` usa un tema host sencillo sin ActionBar para ceder todo el control visual a Compose. -->
     <style name="Theme.Vinoteca" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

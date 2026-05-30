@@ -1,3 +1,4 @@
 <resources>
+    <!-- `app_name` define el nombre visible de la aplicación en launcher, ajustes y barra de actividad. -->
     <string name="app_name">Vinoteca</string>
 </resources>
