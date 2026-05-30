@@ -34,6 +34,27 @@ escanear o buscar un producto y saber **exactamente dónde debe colocarlo** en c
 
 ---
 
+## 📱 Capturas de la Aplicación
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="app/src/main/assets/imagenes_app/home.png" alt="Pantalla principal con el inventario de vinos" width="260" /><br/>
+      <sub><b>Inventario en un vistazo</b><br/>Búsqueda, filtros por categoría<br/>y subcategoría, y ubicación precisa.</sub>
+    </td>
+    <td align="center">
+      <img src="app/src/main/assets/imagenes_app/Agregar_nuevo_vino.png" alt="Formulario para añadir o editar un vino" width="260" /><br/>
+      <sub><b>Alta y edición de vinos</b><br/>Datos, foto, código de barras<br/>y posición en el lineal.</sub>
+    </td>
+    <td align="center">
+      <img src="app/src/main/assets/imagenes_app/Gestionar_categorias.png" alt="Pantalla de gestión de categorías" width="260" /><br/>
+      <sub><b>Gestión de categorías</b><br/>Estructura jerárquica<br/></sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 🛠️ Stack Tecnológico
 
 El proyecto ha sido desarrollado siguiendo las mejores prácticas modernas de Android:
@@ -62,7 +83,7 @@ Este repositorio está preparado para ser clonado y ejecutado directamente en An
 
 1.  Clona el repositorio:
     ```bash
-    git clone https://github.com/tu-usuario/vinoteca.git
+    git clone https://github.com/KevinFlow-ai/Vinoteca.git
     ```
     
 2.  Importa el proyecto en **Android Studio**.
