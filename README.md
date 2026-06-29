@@ -25,30 +25,30 @@ Durante mi experiencia como reponedor en **LIDL**, me enfrenté a un reto diario
 El pasillo contenía más de 300 vinos diferentes, lo que hacía imposible memorizar cada uno.
 Cuando un cliente preguntaba por un vino específico —por ejemplo:
 
-Viña Albali Gran Reserva
+    Viña Albali Gran Reserva
 
-Marqués de Cáceres Crianza
+    Marqués de Cáceres Crianza 
+    
+    Protos Roble
 
-Protos Roble
-
-no era posible saber cuál era ni dónde estaba, especialmente porque no tienes interés en el vino ni en bebidas alcohólicas, lo que dificulta aún más la memorización de marcas y etiquetas.
+    no era posible saber cuál era ni dónde estaba, especialmente porque no tienes interés en el vino ni en bebidas alcohólicas, lo que dificulta aún más la memorización de marcas y etiquetas.
 
 2. Desconocimiento de las familias y tipos de vino
 Los clientes también preguntaban por familias de vino reales, como:
 
-Vino tinto joven
+-   Vino tinto joven
 
-Vino tinto crianza / reserva / gran reserva
+-   Vino tinto crianza / reserva / gran reserva
 
-Vino blanco verdejo / albariño / godello
+-   Vino blanco verdejo / albariño / godello
 
-Vino rosado tempranillo / garnacha
+-   Vino rosado tempranillo / garnacha
 
-Vino Rioja / Ribera del Duero / Rueda / Valdepeñas
+-   Vino Rioja / Ribera del Duero / Rueda / Valdepeñas
 
-Vino espumoso (cava, brut, semiseco)
+-   Vino espumoso (cava, brut, semiseco)
 
-Sin conocimientos previos, era difícil saber en qué parte del pasillo se encontraba cada familia, lo que generaba retrasos y mala experiencia para el cliente.
+    Sin conocimientos previos, era difícil saber en qué parte del pasillo se encontraba cada familia, lo que generaba retrasos y mala experiencia para el cliente.
 
 3. Cambios constantes en la distribución del pasillo
 A veces la tienda modificaba el spiguel (la organización del estante).
@@ -59,9 +59,7 @@ Esto obligaba a aprender de nuevo toda la distribución, aumentando el tiempo de
 Al terminar el turno, era necesario revisar las facturas para comprobar qué vinos habían llegado y cuáles se habían repuesto.
 Después de toda la mañana reponiendo, era difícil recordar:
 
-si un vino sí se había repuesto,
-
-o si simplemente no había llegado.
+    si un vino sí se había repuesto,  o si simplemente no había llegado.
 
 Esto obligaba a volver al pasillo, buscar el vino y verificarlo manualmente, perdiendo tiempo.
 
@@ -69,12 +67,12 @@ Esto obligaba a volver al pasillo, buscar el vino y verificarlo manualmente, per
 Frecuentemente, el nombre del vino en la factura no coincidía con el nombre del empaque.
 Ejemplos reales:
 
-La factura decía: “Vino Rioja Tempranillo”
+    La factura decía: “Vino Rioja Tempranillo”
 
-El empaque decía: “Viña Pomal Tempranillo Crianza”
+    El empaque decía: “Viña Pomal Tempranillo Crianza”
 
-O la factura decía: “Blanco Verdejo 30 uds”  
-pero el empaque decía: “Castillo de Liria Verdejo”.
+    O la factura decía: “Blanco Verdejo 30 uds”  
+    pero el empaque decía: “Castillo de Liria Verdejo”.
 
 En muchos casos recordabas el vino por la imagen del empaque, no por el nombre, lo que hacía la verificación lenta y confusa.
 
